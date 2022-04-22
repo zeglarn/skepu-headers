@@ -122,26 +122,26 @@ auto static
 copy_4d(void ** buffers, void * args) noexcept
 -> void
 {
-	auto out = (T *)STARPU_VECTOR_GET_PTR(*buffers);
-	auto in = (T *)STARPU_TENSOR_GET_PTR(buffers[1]);
-	size_t out_offset(0);
-	size_t in_offset(0);
-	size_t count(0);
-	starpu_codelet_unpack_args(args, &out_offset, &in_offset, &count, 0);
-	out += out_offset;
-	in += in_offset;
+	// auto out = (T *)STARPU_VECTOR_GET_PTR(*buffers);
+	// auto in = (T *)STARPU_TENSOR_GET_PTR(buffers[1]);
+	// size_t out_offset(0);
+	// size_t in_offset(0);
+	// size_t count(0);
+	// starpu_codelet_unpack_args(args, &out_offset, &in_offset, &count, 0);
+	// out += out_offset;
+	// in += in_offset;
 
-	auto threads = starpu_combined_worker_get_size();
-	#pragma omp parallel num_threads(threads)
-	{
-		auto tid = omp_get_thread_num();
-		auto lcount = count / threads;
-		auto rest = count - (lcount * threads);
-		auto start = tid * lcount;
-		auto end = start + lcount + (tid == threads -1 ? rest : 0);
+	// auto threads = starpu_combined_worker_get_size();
+	// #pragma omp parallel num_threads(threads)
+	// {
+	// 	auto tid = omp_get_thread_num();
+	// 	auto lcount = count / threads;
+	// 	auto rest = count - (lcount * threads);
+	// 	auto start = tid * lcount;
+	// 	auto end = start + lcount + (tid == threads -1 ? rest : 0);
 
-		std::copy(in + start, in + end, out + start);
-	}
+	// 	std::copy(in + start, in + end, out + start);
+	// }
 }
 
 } // namespace _starpu

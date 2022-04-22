@@ -215,7 +215,11 @@ namespace skepu
 				SKEPU_ERROR("The container size must be positive.");
 			this->m_size = size;
 			backend::allocateHostMemory<T>(this->m_data, this->m_size);
-	    this->m_deallocEnabled = true;
+	    	this->m_deallocEnabled = true;
+
+#ifdef SKEPU_MPI
+    		this->partition_prepare(size);
+#endif
 		}
 		else SKEPU_ERROR("Container is already initialized");
 	}
@@ -551,6 +555,10 @@ namespace skepu
 #ifdef SKEPU_CUDA
 		this->flush_CU(mode);
 #endif
+
+#ifdef SKEPU_MPI
+   this->flush_MPI();
+#endif
 	}
 	
 
@@ -625,5 +633,6 @@ namespace skepu
 #include "vector_proxy.inl"
 #include "vector_cl.inl"
 #include "vector_cu.inl"
+#include "vector_mpi.inl"
 
 #endif // SKEPU_PRECOMPILED

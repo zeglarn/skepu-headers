@@ -91,8 +91,8 @@ prepare_buffer(T const *, void * ptr)
 			return (T)STARPU_MATRIX_GET_PTR(ptr);
 		case STARPU_BLOCK_INTERFACE_ID:
 			return (T)STARPU_BLOCK_GET_PTR(ptr);
-		case STARPU_TENSOR_INTERFACE_ID:
-			return (T)STARPU_TENSOR_GET_PTR(ptr);
+		// case STARPU_TENSOR_INTERFACE_ID:
+		// 	return (T)STARPU_TENSOR_GET_PTR(ptr);
 		case STARPU_VECTOR_INTERFACE_ID:
 			return (T)STARPU_VECTOR_GET_PTR(ptr);
 		case STARPU_VARIABLE_INTERFACE_ID:
@@ -144,12 +144,12 @@ auto inline
 prepare_buffer(Ten4<T> const *, void * ptr)
 -> Ten4<T>
 {
-	return Ten4<T>(
-		(T *)STARPU_TENSOR_GET_PTR(ptr),
-		STARPU_TENSOR_GET_NT(ptr),
-		STARPU_TENSOR_GET_NZ(ptr),
-		STARPU_TENSOR_GET_NY(ptr),
-		STARPU_TENSOR_GET_NX(ptr));
+	// return Ten4<T>(
+	// 	(T *)STARPU_TENSOR_GET_PTR(ptr),
+	// 	STARPU_TENSOR_GET_NT(ptr),
+	// 	STARPU_TENSOR_GET_NZ(ptr),
+	// 	STARPU_TENSOR_GET_NY(ptr),
+	// 	STARPU_TENSOR_GET_NX(ptr));
 }
 
 template<typename T>

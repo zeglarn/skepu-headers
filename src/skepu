@@ -41,12 +41,21 @@
 
 #else
 
-#include "skepu3/cluster/cluster_fake.hpp"
+#ifdef SKEPU_MPI
+#include "skepu3/mpi/cluster-mpi.hpp"
+#else
+#include "skepu3/mpi/cluster_fake.hpp"
+#endif
 
 #include "skepu3/impl/backend.hpp"
 #include "skepu3/backend/helper_methods.h"
 #include "skepu3/impl/common.hpp"
+
+#ifdef SKEPU_MPI
+#include "skepu3/mpi/external.hpp"
+#else
 #include "skepu3/impl/external.hpp"
+#endif
 #include "skepu3/backend/hybrid_tuner.h"
 
 //#ifndef SKEPU_PRECOMPILED

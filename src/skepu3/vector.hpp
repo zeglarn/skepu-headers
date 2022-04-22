@@ -313,6 +313,20 @@ namespace skepu
 		void invalidateDeviceData_CU(int deviceID = -1) const;
 		void releaseDeviceAllocations_CU(int deviceID = -1) const;
 #endif
+
+#ifdef SKEPU_MPI
+	public:
+		skepu::cluster::Partition<T> partition{};
+		size_t part_begin();
+		size_t part_end();
+
+		void partition_prepare();
+		void partition_prepare(size_t size);
+		void flush_MPI();
+		void allgather();
+		void gather_to_root();
+		void scatter_from_root();
+#endif
 		
 	};
 

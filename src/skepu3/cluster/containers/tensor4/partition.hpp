@@ -330,12 +330,12 @@ private:
 		}
 	}
 
-	auto
-	get_ptr(starpu_data_handle_t & handle) noexcept
-	-> T * override
-	{
-		return (T *)starpu_tensor_get_local_ptr(handle);
-	}
+	// auto
+	// get_ptr(starpu_data_handle_t & handle) noexcept
+	// -> T * override
+	// {
+	// 	return (T *)starpu_tensor_get_local_ptr(handle);
+	// }
 
 	auto
 	register_local_storage(T * ptr) noexcept

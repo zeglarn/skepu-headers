@@ -66,13 +66,14 @@ namespace skepu
 		T *data;
 		size_t cols;
 		
-#ifdef SKEPU_CUDA
+		#ifdef SKEPU_CUDA
 		__host__ __device__
-#endif
+		#endif
 		T &operator[](size_t index)       { return this->data[index]; }
-#ifdef SKEPU_CUDA
+
+		#ifdef SKEPU_CUDA
 		__host__ __device__
-#endif
+		#endif
 		T  operator[](size_t index) const { return this->data[index]; }
 		
 		#ifdef SKEPU_CUDA
@@ -95,13 +96,14 @@ namespace skepu
 		T *data;
 		size_t rows, cols;
 		
-#ifdef SKEPU_CUDA
+		#ifdef SKEPU_CUDA
 		__host__ __device__
-#endif
+		#endif
 		T &operator[](size_t index)       { return this->data[index * this->cols]; }
-#ifdef SKEPU_CUDA
+		
+		#ifdef SKEPU_CUDA
 		__host__ __device__
-#endif
+		#endif
 		T  operator[](size_t index) const { return this->data[index * this->cols]; }
 		
 		#ifdef SKEPU_CUDA
@@ -208,7 +210,6 @@ namespace skepu
 		Matrix(T * const ptr, size_type _rows, size_type _cols, bool deallocEnabled = true);
 		
 		~Matrix();
-		
 		
 		void operator=(std::initializer_list<T> l)
 		{
@@ -636,6 +637,20 @@ namespace skepu
 		void updateHost_CU(int deviceID = -1) const;
 		void invalidateDeviceData_CU(int deviceID = -1) const;
 		void releaseDeviceAllocations_CU(int deviceID = -1) const;
+#endif
+
+#ifdef SKEPU_MPI
+	public:
+		skepu::cluster::Partition<T> partition{};
+		size_t part_begin();
+		size_t part_end();
+
+		void partition_prepare();
+		void partition_prepare(size_t major_dim, size_t minor_dims);
+		void flush_MPI();
+		void allgather();
+		void gather_to_root();
+		void scatter_from_root();
 #endif
 		
 	}; // end class Matrix...

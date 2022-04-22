@@ -256,6 +256,11 @@ void Matrix<T>::init(size_type _rows, size_type _cols)
 #ifdef SKEPU_OPENCL
     this->m_transposeKernels_CL = &(backend::Environment<T>::getInstance()->m_transposeKernels_CL);
 #endif
+
+#ifdef SKEPU_MPI
+    this->partition_prepare(_rows, _cols);
+#endif
+
   }
   else SKEPU_ERROR("Container is already initialized");
 }
@@ -565,6 +570,10 @@ void Matrix<T>::flush(FlushMode mode)
 #ifdef SKEPU_CUDA
    this->flush_CU(mode);
 #endif
+
+#ifdef SKEPU_MPI
+   this->flush_MPI();
+#endif
 }
 
 
@@ -701,5 +710,6 @@ bool Matrix<T>::operator!=(const Matrix<T>& c1)
 #include "matrix_transpose.inl"
 #include "matrix_cl.inl"
 #include "matrix_cu.inl"
+#include "matrix_mpi.inl"
 
 #endif // SKEPU_PRECOMPILED

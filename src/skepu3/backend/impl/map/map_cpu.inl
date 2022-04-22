@@ -20,8 +20,29 @@ namespace skepu
 			pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().invalidateDeviceData(), 0)...);
 			
 			auto random = this->template prepareRandom<MapFunc::randomCount>(size);
-			
+
+#ifdef SKEPU_MPI
+			/*
+			Owner computes rule for the result matrix decides where to do work.
+			*/
+
+			auto &out = get<0>(std::forward<CallArgs>(args)...).getParent();
+			size_t begin = out.part_begin();
+			size_t end = out.part_end();
+
+			pack_expand(
+				(
+					skepu::cluster::handle_container_arg(
+						get<AI>(std::forward<CallArgs>(args)...).getParent(),
+						std::get<AI-arity-outArity>(typename MapFunc::ProxyTags{})), 0) ... );
+
+			/*
+			Run user function on the elements that belong to this rank.
+			*/
+			for (size_t i = begin; i < end; ++i)
+#else
 			for (size_t i = 0; i < size; ++i)
+#endif			
 			{
 				auto index = (get<0>(std::forward<CallArgs>(args)...) + i).getIndex();
 				auto res = F::forward(MapFunc::CPU, index, random,
