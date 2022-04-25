@@ -19,7 +19,6 @@ namespace skepu
 			pack_expand((get<AI>(std::forward<CallArgs>(args)...).getParent().invalidateDeviceData(hasWriteAccess(MapFunc::anyAccessMode[AI-arity-outArity])), 0)...);
 			pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().invalidateDeviceData(), 0)...);
 			
-			auto random = this->template prepareRandom<MapFunc::randomCount>(size);
 
 #ifdef SKEPU_MPI
 			/*
@@ -30,6 +29,11 @@ namespace skepu
 			size_t begin = out.part_begin();
 			size_t end = out.part_end();
 
+			const int rank = cluster::mpi_rank();
+			const int num_ranks = cluster::mpi_size();
+
+			auto rank_random = this->template prepareRandom<MapFunc::randomCount>(size,num_ranks);
+			auto random = rank_random(rank);
 			pack_expand(
 				(
 					skepu::cluster::handle_container_arg(
@@ -41,6 +45,7 @@ namespace skepu
 			*/
 			for (size_t i = begin; i < end; ++i)
 #else
+			auto random = this->template prepareRandom<MapFunc::randomCount>(size);
 			for (size_t i = 0; i < size; ++i)
 #endif			
 			{

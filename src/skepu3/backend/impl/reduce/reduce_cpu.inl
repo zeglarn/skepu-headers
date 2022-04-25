@@ -16,20 +16,32 @@ namespace skepu
 		{
 			DEBUG_TEXT_LEVEL1("CPU Reduce (Matrix 1D): rows = " << arg.total_rows() << ", cols = " << arg.total_cols() << "\n");
 			
-			const size_t rows = arg.total_rows();
-			const size_t cols = arg.total_cols();
-			
 			// Make sure we are properly synched with device data
 			arg.updateHost();
-			
+
+			const size_t rows = arg.total_rows();
+			const size_t cols = arg.total_cols();
+
 			T *data = arg.getAddress();
+#ifdef SKEPU_MPI
+			/*!
+			Owner computes rule for partition of \em rows in arg
+			corresponding to elements in res.
+			*/
+			const size_t begin = res.part_begin();
+			const size_t end = res.part_end();
+
+			data += cols*begin;
+
+			for (size_t r = begin; r < end; ++r, data += cols)
+#else				
 			for (size_t r = 0; r < rows; ++r, data += cols)
+#endif
 			{
 				res(r) = data[0];
 				for (size_t c = 1; c < cols; c++)
 					res(r) = ReduceFunc::CPU(res(r), data[c]);
 			}
-			
 		}
 		
 		
@@ -92,15 +104,53 @@ namespace skepu
 		typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
 		::CPU(T &res, Matrix<T>& arg)
 		{
-			const size_t rows = arg.total_rows();
-			const size_t cols = arg.total_cols();
-			
 			DEBUG_TEXT_LEVEL1("CPU Reduce (2D): rows = " << rows << ", cols = " << cols << "\n");
 			
 			// Make sure we are properly synched with device data
 			arg.updateHost();
 			
+			const size_t rows = arg.total_rows();
+			const size_t cols = arg.total_cols();
+			
 			T *data = arg.getAddress();
+
+#ifdef SKEPU_MPI
+			const size_t begin = arg.begin() / cols;
+			const size_t end = arg.end() / cols;
+
+			data += arg.begin();
+
+			const int rank = cluster::mpi_rank();
+			const int num_ranks = cluster::mpi_size();
+
+			T _res;
+
+			for (size_t r = begin; r < end; ++r, data += cols)
+			{
+				T tempResult = data[0];
+				for (size_t c = 1; c < cols; ++c)
+					tempResult = ReduceFuncRowWise::CPU(tempResult, data[c]);
+				
+				if (r != begin)
+					_res = ReduceFuncColWise::CPU(_res,tempResult);
+				else
+					_res = tempResult;
+			}
+
+			std::vector<T> partsum(num_ranks);
+			partsum[rank] = _res;
+
+			size_t byte_size = sizeof(T);
+
+			cluster::allgather(&_res,byte_size,&partsum[0],byte_size);
+
+			_res = partsum[0];
+
+			for (size_t i = 1; i < num_ranks; i++)
+				_res = ReduceFuncColWise::CPU(_res,partsum[i]);
+			
+			res = ReduceFuncColWise::CPU(res,_res);
+#else
 			for (size_t r = 0; r < rows; ++r, data += cols)
 			{
 				T tempResult = data[0];
@@ -109,7 +159,7 @@ namespace skepu
 				
 				res = ReduceFuncColWise::CPU(res, tempResult);
 			}
-			
+#endif		
 			return res;
 		}
 		
