@@ -37,11 +37,20 @@ namespace skepu
 		T *data;
 		size_t rows;
 		size_t cols;
+#ifdef SKEPU_MPI
+		ContainerType *parent;
+#endif
 		
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
-		T &operator[](size_t index)       { return this->data[index]; }
+		T &operator[](size_t index)
+		{
+#ifdef SKEPU_MPI
+			parent->dirty = true;
+#endif
+			return this->data[index];
+		}
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
@@ -50,7 +59,13 @@ namespace skepu
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
-		T &operator()(size_t i, size_t j)       { return this->data[i * this->cols + j]; }
+		T &operator()(size_t i, size_t j)
+		{
+#ifdef SKEPU_MPI
+			parent->dirty = true;
+#endif
+			return this->data[i * this->cols + j];
+		}
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
@@ -65,11 +80,20 @@ namespace skepu
 		
 		T *data;
 		size_t cols;
-		
+#ifdef SKEPU_MPI
+		ContainerType *parent;
+#endif
+
 		#ifdef SKEPU_CUDA
 		__host__ __device__
 		#endif
-		T &operator[](size_t index)       { return this->data[index]; }
+		T &operator[](size_t index)
+		{
+#ifdef SKEPU_MPI
+			parent->dirty = true;
+#endif
+			return this->data[index];
+		}
 
 		#ifdef SKEPU_CUDA
 		__host__ __device__
@@ -79,7 +103,13 @@ namespace skepu
 		#ifdef SKEPU_CUDA
 				__host__ __device__
 		#endif
-				T &operator()(size_t index)       { return this->data[index]; }
+				T &operator()(size_t index)
+				{
+#ifdef SKEPU_MPI
+					parent->dirty = true;
+#endif
+					return this->data[index];
+				}
 		#ifdef SKEPU_CUDA
 				__host__ __device__
 		#endif
@@ -95,11 +125,20 @@ namespace skepu
 		
 		T *data;
 		size_t rows, cols;
+#ifdef SKEPU_MPI
+		ContainerType *parent;
+#endif
 		
 		#ifdef SKEPU_CUDA
 		__host__ __device__
 		#endif
-		T &operator[](size_t index)       { return this->data[index * this->cols]; }
+		T &operator[](size_t index)
+		{
+#ifdef SKEPU_MPI
+			parent->dirty = true;
+#endif
+			return this->data[index * this->cols];
+		}
 		
 		#ifdef SKEPU_CUDA
 		__host__ __device__
@@ -109,7 +148,13 @@ namespace skepu
 		#ifdef SKEPU_CUDA
 				__host__ __device__
 		#endif
-				T &operator()(size_t index)       { return this->data[index * this->cols]; }
+				T &operator()(size_t index)
+				{
+#ifdef SKEPU_MPI
+					parent->dirty = true;
+#endif
+					return this->data[index * this->cols];
+				}
 		#ifdef SKEPU_CUDA
 				__host__ __device__
 		#endif
@@ -310,6 +355,9 @@ namespace skepu
 			proxy.data = this->m_data;
 			proxy.rows = this->m_rows;
 			proxy.cols = this->m_cols;
+#ifdef SKEPU_MPI
+			proxy.parent = this;
+#endif
 			return proxy;
 		}
 		
@@ -325,6 +373,9 @@ namespace skepu
 			MatRow<T> proxy;
 			proxy.data = this->m_data + r * this->m_cols;
 			proxy.cols = this->m_cols;
+#ifdef SKEPU_MPI
+			proxy.parent = this;
+#endif
 			return proxy;
 		}
 		
@@ -347,6 +398,9 @@ namespace skepu
 			proxy.data = this->m_data + c;
 			proxy.rows = this->m_rows;
 			proxy.cols = this->m_cols;
+#ifdef SKEPU_MPI
+			proxy.parent = this;
+#endif
 			return proxy;
 		}
 		
@@ -644,6 +698,8 @@ namespace skepu
 		skepu::cluster::Partition<T> partition{};
 		size_t part_begin();
 		size_t part_end();
+
+		bool dirty{false};
 
 		void partition_prepare();
 		void partition_prepare(size_t major_dim, size_t minor_dims);

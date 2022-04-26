@@ -36,6 +36,9 @@ namespace skepu
     template<typename T>
     void Vector<T>::allgather()
     {
+        if (!this->dirty) return;
+
+        this->dirty = false;
 
         skepu::cluster::allgatherv_inplace(
             this->m_data,
@@ -47,29 +50,34 @@ namespace skepu
     template<typename T>
     void Vector<T>::gather_to_root()
     {
-        skepu::cluster::gather_to_root_inplace(
-            this->m_data,
-            this->partition.byte_counts,
-            this->partition.byte_displs,
-            &this->m_data[this->part_begin()]
-        );
+        if (this->dirty)
+            skepu::cluster::gather_to_root_inplace(
+                this->m_data,
+                this->partition.byte_counts,
+                this->partition.byte_displs,
+                &this->m_data[this->part_begin()]
+            );
     }
 
     template<typename T>
     void Vector<T>::scatter_from_root()
     {
-        skepu::cluster::scatter_from_root_inplace(
-            this->m_data,
-            this->partition.byte_counts,
-            this->partition.byte_displs,
-            &this->m_data[this->part_begin()]
-        );
+        if (this->dirty)
+        {
+            this->dirty = false;
+            skepu::cluster::scatter_from_root_inplace(
+                this->m_data,
+                this->partition.byte_counts,
+                this->partition.byte_displs,
+                &this->m_data[this->part_begin()]
+            );
+        }
     }
 
     template<typename T>
     void Vector<T>::flush_MPI()
     {
-        this->gather_to_root();
+        this->allgather();
     }
 }
 

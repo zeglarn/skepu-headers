@@ -36,6 +36,9 @@ namespace skepu
     template<typename T>
     void Matrix<T>::allgather()
     {
+        if (!this->dirty) return;
+
+        this->dirty = false;
 
         skepu::cluster::allgatherv_inplace(
             this->m_data,
@@ -69,7 +72,7 @@ namespace skepu
     template<typename T>
     void Matrix<T>::flush_MPI()
     {
-        this->gather_to_root();
+        this->allgather();
     }
 }
 

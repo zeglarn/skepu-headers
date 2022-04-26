@@ -47,7 +47,13 @@ namespace skepu
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
-		T &operator[](size_t index)       { return this->data[index]; }
+		T &operator[](size_t index)
+		{
+#ifdef SKEPU_MPI
+			parent->dirty = true;
+#endif
+			return this->data[index];
+		}
 
 #ifdef SKEPU_CUDA
 		__host__ __device__
@@ -57,7 +63,13 @@ namespace skepu
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
-		T &operator()(size_t index)       { return this->data[index]; }
+		T &operator()(size_t index)
+		{
+#ifdef SKEPU_MPI
+			parent->dirty = true;
+#endif
+			return this->data[index];
+		}
 
 #ifdef SKEPU_CUDA
 		__host__ __device__
@@ -66,6 +78,9 @@ namespace skepu
 		
 		T *data;
 		size_t size;
+#ifdef SKEPU_MPI
+		ContainerType *parent;
+#endif
 	};
 	
 	template <typename T>
@@ -174,8 +189,11 @@ namespace skepu
 		
 		template<typename Ignore>
 		Vec<T> hostProxy(ProxyTag::Default, Ignore)
-		{
-			return {this->m_data, this->m_size};
+		{	Vec<T> vec{this->m_data, this->m_size};
+#ifdef SKEPU_MPI
+			vec.parent = this;
+#endif
+			return vec;
 		}
 		
 		Vec<T> hostProxy() { return this->hostProxy(ProxyTag::Default{}, 0); }
@@ -319,6 +337,8 @@ namespace skepu
 		skepu::cluster::Partition<T> partition{};
 		size_t part_begin();
 		size_t part_end();
+
+		bool dirty{false};
 
 		void partition_prepare();
 		void partition_prepare(size_t size);

@@ -29,6 +29,8 @@ namespace skepu
 			size_t begin = out.part_begin();
 			size_t end = out.part_end();
 
+			if (size > 0) out.dirty = true;
+
 			const int rank = cluster::mpi_rank();
 			const int num_ranks = cluster::mpi_size();
 
