@@ -347,17 +347,17 @@ namespace skepu
 		void gather_to_root();
 		void scatter_from_root();
 
-		std::string name{"Vector"};
+// 		std::string name{"Vector"};
 
-		void setName(std::string _name)
-		{
-			name = _name;
-		}
-	public:
-		std::string getName() {return name;}
-#else
-	public:
-		void setName(std::string);
+// 		void setName(std::string _name)
+// 		{
+// 			name = _name;
+// 		}
+// 	public:
+// 		std::string getName() {return name;}
+// #else
+// 	public:
+// 		void setName(std::string) { }
 #endif
 		
 	};

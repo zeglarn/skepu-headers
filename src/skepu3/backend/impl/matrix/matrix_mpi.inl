@@ -73,8 +73,7 @@ namespace skepu
     template<typename T>
     void Matrix<T>::scatter_from_root()
     {
-        if (!this->dirty) return;
-        this->dirty = false;
+        this->dirty = true;
 
 #ifdef SKEPU_MPI_DEBUG
         if (!cluster::mpi_rank())
