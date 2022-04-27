@@ -42,6 +42,7 @@
 #else
 
 #ifdef SKEPU_MPI
+#define SKEPU_MPI_DEBUG 1
 #include "skepu3/mpi/cluster-mpi.hpp"
 #else
 #include "skepu3/mpi/cluster_fake.hpp"

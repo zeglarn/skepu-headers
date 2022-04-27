@@ -40,6 +40,11 @@ namespace skepu
 
         this->dirty = false;
 
+#ifdef SKEPU_MPI_DEBUG
+        if (!cluster::mpi_rank())
+            std::cout << "<<<[ " << this->getName() << " is running allgather. ]>>>\n";
+#endif
+
         skepu::cluster::allgatherv_inplace(
             this->m_data,
             this->partition.byte_counts,
@@ -50,28 +55,38 @@ namespace skepu
     template<typename T>
     void Vector<T>::gather_to_root()
     {
-        if (this->dirty)
-            skepu::cluster::gather_to_root_inplace(
-                this->m_data,
-                this->partition.byte_counts,
-                this->partition.byte_displs,
-                &this->m_data[this->part_begin()]
-            );
+        if (!this->dirty) return;
+
+#ifdef SKEPU_MPI_DEBUG
+        if (!cluster::mpi_rank())
+            std::cout << "<<<[ " << this->getName() << " is gathering to root. ]>>>\n";
+#endif
+
+        skepu::cluster::gather_to_root_inplace(
+            this->m_data,
+            this->partition.byte_counts,
+            this->partition.byte_displs,
+            &this->m_data[this->part_begin()]
+        );
     }
 
     template<typename T>
     void Vector<T>::scatter_from_root()
     {
-        if (this->dirty)
-        {
-            this->dirty = false;
-            skepu::cluster::scatter_from_root_inplace(
-                this->m_data,
-                this->partition.byte_counts,
-                this->partition.byte_displs,
-                &this->m_data[this->part_begin()]
-            );
-        }
+        if (!this->dirty) return;
+        this->dirty = false;
+
+#ifdef SKEPU_MPI_DEBUG
+        if (!cluster::mpi_rank())
+            std::cout << "<<<[ " << this->getName() << " is scattering from root. ]>>>\n";
+#endif
+
+        skepu::cluster::scatter_from_root_inplace(
+            this->m_data,
+            this->partition.byte_counts,
+            this->partition.byte_displs,
+            &this->m_data[this->part_begin()]
+        );
     }
 
     template<typename T>
