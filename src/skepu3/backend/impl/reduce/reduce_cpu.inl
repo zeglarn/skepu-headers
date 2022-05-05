@@ -10,33 +10,42 @@ namespace skepu
 		 *  Performs the Reduction on a whole Matrix either row-wise or column-wise. Returns a \em SkePU vector of reduction result.
 		 *  Using the \em CPU as backend.
 		 */
+		// template<typename ReduceFunc, typename CUDAKernel, typename CLKernel>
+		// void Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
+		// ::CPU(Vector<T> &res, Matrix<T>& arg)
+		// {
+		// 	DEBUG_TEXT_LEVEL1("CPU Reduce (Matrix 1D): rows = " << arg.total_rows() << ", cols = " << arg.total_cols() << "\n");
+			
+		// 	// Make sure we are properly synched with device data
+		// 	arg.updateHost();
+
+		// 	const size_t rows = arg.total_rows();
+		// 	const size_t cols = arg.total_cols();
+
+		// 	T *data = arg.getAddress();
+		
+		// 	for (size_t r = 0; r < rows; ++r, data += cols)
+		// 	{
+		// 		res(r) = data[0];
+		// 		for (size_t c = 1; c < cols; c++)
+		// 			res(r) = ReduceFunc::CPU(res(r), data[c]);
+		// 	}
+		// }
+
 		template<typename ReduceFunc, typename CUDAKernel, typename CLKernel>
 		void Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
-		::CPU(Vector<T> &res, Matrix<T>& arg)
+		::CPU(VectorIterator<T> &res, MatrixIterator<T>& arg, size_t size)
 		{
 			DEBUG_TEXT_LEVEL1("CPU Reduce (Matrix 1D): rows = " << arg.total_rows() << ", cols = " << arg.total_cols() << "\n");
 			
 			// Make sure we are properly synched with device data
-			arg.updateHost();
+			arg.getParent().updateHost();
 
-			const size_t rows = arg.total_rows();
-			const size_t cols = arg.total_cols();
+			const size_t cols = arg.getParent().total_cols();
 
 			T *data = arg.getAddress();
-#ifdef SKEPU_MPI
-			/*!
-			Owner computes rule for partition of \em rows in arg
-			corresponding to elements in res.
-			*/
-			const size_t begin = res.part_begin();
-			const size_t end = res.part_end();
-
-			data += cols*begin;
-
-			for (size_t r = begin; r < end; ++r, data += cols)
-#else				
-			for (size_t r = 0; r < rows; ++r, data += cols)
-#endif
+		
+			for (size_t r = 0; r < size; ++r, data += cols)
 			{
 				res(r) = data[0];
 				for (size_t c = 1; c < cols; c++)
@@ -58,38 +67,12 @@ namespace skepu
 			
 			// Make sure we are properly synched with device data
 			arg.getParent().updateHost();
-#ifdef SKEPU_MPI
 
-			size_t begin = arg.getParent().part_begin();
-			size_t end = arg.getParent().part_end();
-			
-			int rank = cluster::mpi_rank();
-			int num_ranks = cluster::mpi_size();
+			T* data = arg.getAddress();
 
-			T _res = arg(begin++);
-
-			for (size_t i = begin; i < end; i++)
-				_res = ReduceFunc::CPU(_res, arg(i));
-			
-			std::vector<T> partsum(num_ranks);
-			partsum[rank] = _res;
-
-			size_t byte_size = sizeof(T);
-
-			cluster::allgather(&_res,byte_size,&partsum[0],byte_size);
-
-			_res = partsum[0];
-
-			for (size_t i = 1; i < num_ranks; i++)
-				_res = ReduceFunc::CPU(_res, partsum[i]);
-
-			res = ReduceFunc::CPU(res,_res);
-
-#else
 			// Uses operator () to avoid unneccessary synchronization function calls
 			for (size_t i = 0; i < size; ++i)
-				res = ReduceFunc::CPU(res, arg(i));
-#endif
+				res = ReduceFunc::CPU(res, data[i]);
 			
 			return res;
 		}
@@ -100,66 +83,60 @@ namespace skepu
 		 *  input Matrix. Returns a scalar result.
 		 *  Using the \em CPU as backend.
 		 */
+		// template<typename ReduceFuncRowWise, typename ReduceFuncColWise, typename CUDARowWise, typename CUDAColWise, typename CLKernel>
+		// typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
+		// ::CPU(T &res, Matrix<T>& arg)
+		// {
+		// 	DEBUG_TEXT_LEVEL1("CPU Reduce (2D): rows = " << rows << ", cols = " << cols << "\n");
+			
+		// 	// Make sure we are properly synched with device data
+		// 	arg.updateHost();
+			
+		// 	const size_t rows = arg.total_rows();
+		// 	const size_t cols = arg.total_cols();
+			
+		// 	T *data = arg.getAddress();
+
+
+		// 	for (size_t r = 0; r < rows; ++r, data += cols)
+		// 	{
+		// 		T tempResult = data[0];
+		// 		for (size_t c = 1; c < cols; c++)
+		// 			tempResult = ReduceFuncRowWise::CPU(tempResult, data[c]);
+				
+		// 		res = ReduceFuncColWise::CPU(res, tempResult);
+		// 	}	
+		// 	return res;
+		// }
+
+
 		template<typename ReduceFuncRowWise, typename ReduceFuncColWise, typename CUDARowWise, typename CUDAColWise, typename CLKernel>
 		typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
-		::CPU(T &res, Matrix<T>& arg)
+		::CPU(MatrixIterator<T>& arg, size_t size)
 		{
 			DEBUG_TEXT_LEVEL1("CPU Reduce (2D): rows = " << rows << ", cols = " << cols << "\n");
 			
 			// Make sure we are properly synched with device data
-			arg.updateHost();
+			arg.getParent().updateHost();
 			
-			const size_t rows = arg.total_rows();
-			const size_t cols = arg.total_cols();
+			const size_t cols = arg.getParent().total_cols();
+			const size_t rows = size/cols;
 			
 			T *data = arg.getAddress();
 
-#ifdef SKEPU_MPI
-			const size_t begin = arg.begin() / cols;
-			const size_t end = arg.end() / cols;
+			T res{};
 
-			data += arg.begin();
 
-			const int rank = cluster::mpi_rank();
-			const int num_ranks = cluster::mpi_size();
-
-			T _res;
-
-			for (size_t r = begin; r < end; ++r, data += cols)
-			{
-				T tempResult = data[0];
-				for (size_t c = 1; c < cols; ++c)
-					tempResult = ReduceFuncRowWise::CPU(tempResult, data[c]);
-				
-				if (r != begin)
-					_res = ReduceFuncColWise::CPU(_res,tempResult);
-				else
-					_res = tempResult;
-			}
-
-			std::vector<T> partsum(num_ranks);
-			partsum[rank] = _res;
-
-			size_t byte_size = sizeof(T);
-
-			cluster::allgather(&_res,byte_size,&partsum[0],byte_size);
-
-			_res = partsum[0];
-
-			for (size_t i = 1; i < num_ranks; i++)
-				_res = ReduceFuncColWise::CPU(_res,partsum[i]);
-			
-			res = ReduceFuncColWise::CPU(res,_res);
-#else
 			for (size_t r = 0; r < rows; ++r, data += cols)
 			{
 				T tempResult = data[0];
 				for (size_t c = 1; c < cols; c++)
 					tempResult = ReduceFuncRowWise::CPU(tempResult, data[c]);
-				
-				res = ReduceFuncColWise::CPU(res, tempResult);
-			}
-#endif		
+				if (r == 0)
+					res = tempResult;
+				else
+					res = ReduceFuncColWise::CPU(res, tempResult);
+			}	
 			return res;
 		}
 		

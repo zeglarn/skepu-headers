@@ -143,70 +143,112 @@ namespace skepu
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
 
 				Ret res = this->m_start;
+				Ret ret{};
 
 				if (disjunction((get<EI>(std::forward<CallArgs>(args)...).size() < size)...))
 					SKEPU_ERROR("Non-matching container sizes");
 
 				this->selectBackend(size);
 
+#ifdef SKEPU_MPI
+				const int rank = cluster::mpi_rank();
+				const int numRanks = cluster::mpi_size();
+				
+				pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
+				pack_expand((cluster::handle_container_arg(get<AI>(std::forward<CallArgs>(args)...).getParent(),std::get<AI-arity-outArity>(typename MapFunc::ProxyTags{})), 0)...);
+
+				size_t start{0};
+				
+				if (sizeof...(CallArgs) == 0)
+				{
+					cluster::Partition<Ret> p{};
+					p.prepare(size);
+					start = p.part_begin();
+					size = p.part_end() - start;
+				}
+				else
+					pack_expand((size = get<EI>(std::forward<CallArgs>(args)...).getParent().part_size(), 0)...);
+#else
+				const int rank{0};
+				const int numRanks{1};
+				size_t start{0};
+#endif
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
 #ifdef SKEPU_HYBRID
-					return this->Hybrid(size, oi, ei, ai, ci, res,
+					ret = this->Hybrid(size, oi, ei, ai, ci, res,
 						get<EI>(std::forward<CallArgs>(args)...).begin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
 						get<CI>(std::forward<CallArgs>(args)...)...
 					);
+					break;
 #endif
 				case Backend::Type::CUDA:
 #ifdef SKEPU_CUDA
-					return this->CUDA(0, size, oi, ei, ai, ci, res,
+					ret = this->CUDA(0, size, oi, ei, ai, ci, res,
 						get<EI>(std::forward<CallArgs>(args)...).begin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
 						get<CI>(std::forward<CallArgs>(args)...)...
 					);
+					break;
 #endif
 				case Backend::Type::OpenCL:
 #ifdef SKEPU_OPENCL
-					return this->CL(0, size, ei, ai, ci, res,
+					ret = this->CL(0, size, ei, ai, ci, res,
 						get<EI>(std::forward<CallArgs>(args)...).begin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
 						get<CI>(std::forward<CallArgs>(args)...)...
 					);
+					break;
 #endif
 				case Backend::Type::OpenMP:
 #ifdef SKEPU_OPENMP
-					return this->OMP(size, oi, ei, ai, ci, res,
+					ret = this->OMP(size, start, rank, numRanks, oi, ei, ai, ci, res,
 						get<EI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[EI])...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
 						get<CI>(std::forward<CallArgs>(args)...)...
 					);
+					break;
 #endif
 				default:
-					return this->CPU(size, oi, ei, ai, ci, res,
+					ret = this->CPU(size, start, rank, numRanks, oi, ei, ai, ci, res,
 						get<EI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[EI])...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
 						get<CI>(std::forward<CallArgs>(args)...)...
 					);
 				}
+
+#ifdef SKEPU_MPI
+				pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(false), 0)...);
+				size_t byteSize = sizeof(Ret);
+				std::vector<Ret> partsum(numRanks);
+				cluster::allgather(&ret, byteSize,&partsum[0],byteSize);
+
+				ret = partsum[0];
+				for (size_t i = 1; i < numRanks; i++)
+					ret = ReduceFunc::CPU(ret, partsum[i]);
+#endif
+
+				return ret;
 			}
 
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			Ret CPU(size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
+			Ret CPU(size_t size, size_t , int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
 
 			template<size_t... OI, size_t... AI, size_t... CI, typename... CallArgs>
-			Ret CPU(size_t size, pack_indices<OI...>, pack_indices<>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
+			Ret CPU(size_t size, size_t start, int rank, int numRanks, pack_indices<OI...>, pack_indices<>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
 
 
 #ifdef SKEPU_OPENMP
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
-			Ret OMP(size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
+			Ret OMP(size_t size, size_t start, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
 
 			template<size_t... OI, size_t... AI, size_t... CI, typename ...CallArgs>
-			Ret OMP(size_t size, pack_indices<OI...>, pack_indices<>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
+			Ret OMP(size_t size, size_t start, int rank, int numRanks, pack_indices<OI...>, pack_indices<>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args);
 
 #endif // SKEPU_OPENMP
 

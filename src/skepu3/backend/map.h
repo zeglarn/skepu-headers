@@ -107,13 +107,13 @@ namespace skepu
 			// ==========================    Implementation     ==========================
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void CPU(size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void CPU(size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 
 #ifdef SKEPU_OPENMP
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
-			void OMP(size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void OMP(size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 #endif // SKEPU_OPENMP
 
@@ -121,7 +121,7 @@ namespace skepu
 #ifdef SKEPU_CUDA
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void CUDA(size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void CUDA(size_t startIdx, size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
 			void         mapSingleThread_CU(size_t deviceID, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
@@ -141,17 +141,17 @@ namespace skepu
 #ifdef SKEPU_OPENCL
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void CL(size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void CL(size_t startIdx, size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void mapNumDevices_CL(size_t startIdx, size_t numDevices, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void mapNumDevices_CL(size_t startIdx, size_t numDevices, size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 #endif // SKEPU_OPENCL
 
 #ifdef SKEPU_HYBRID
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void Hybrid(size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void Hybrid(size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 #endif // SKEPU_HYBRID
 
@@ -168,11 +168,27 @@ namespace skepu
 
 				this->selectBackend(size);
 
+#ifdef SKEPU_MPI
+				const int rank = cluster::mpi_rank();
+				const int numRanks = cluster::mpi_size();
+
+				pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
+				pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
+				pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().mark_dirty(), 0)...);
+
+				pack_expand((cluster::handle_container_arg(get<AI>(std::forward<CallArgs>(args)...).getParent(),std::get<AI-arity-outArity>(typename MapFunc::ProxyTags{})), 0)...);
+				
+				size = get<0>(std::forward<CallArgs>(args)...).getParent().part_size();
+#else
+				const int rank = 0;
+				const int numRanks = 1;
+#endif
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
 #ifdef SKEPU_HYBRID
-					this->Hybrid(size, oi, ei, ai, ci,
+					this->Hybrid(size, rank, numRanks, oi, ei, ai, ci,
 						get<OI>(std::forward<CallArgs>(args)...).begin()...,
 						get<EI>(std::forward<CallArgs>(args)...).begin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
@@ -182,7 +198,7 @@ namespace skepu
 #endif
 				case Backend::Type::CUDA:
 #ifdef SKEPU_CUDA
-					this->CUDA(0, size, oi, ei, ai, ci,
+					this->CUDA(0, size, rank, numRanks, oi, ei, ai, ci,
 						get<OI>(std::forward<CallArgs>(args)...).begin()...,
 						get<EI>(std::forward<CallArgs>(args)...).begin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
@@ -192,7 +208,7 @@ namespace skepu
 #endif
 				case Backend::Type::OpenCL:
 #ifdef SKEPU_OPENCL
-					this->CL(0, size, oi, ei, ai, ci,
+					this->CL(0, size, rank, numRanks, oi, ei, ai, ci,
 						get<OI>(std::forward<CallArgs>(args)...).begin()...,
 						get<EI>(std::forward<CallArgs>(args)...).begin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
@@ -202,7 +218,7 @@ namespace skepu
 #endif
 				case Backend::Type::OpenMP:
 #ifdef SKEPU_OPENMP
-					this->OMP(size, oi, ei, ai, ci,
+					this->OMP(size, rank, numRanks, oi, ei, ai, ci,
 						get<OI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[OI])...,
 						get<EI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[EI])...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
@@ -211,7 +227,7 @@ namespace skepu
 					break;
 #endif
 				default:
-					this->CPU(size, oi, ei, ai, ci,
+					this->CPU(size, rank, numRanks, oi, ei, ai, ci,
 						get<OI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[OI])...,
 						get<EI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[EI])...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
@@ -219,6 +235,10 @@ namespace skepu
 					);
 					break;
 				}
+#ifdef SKEPU_MPI
+				pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(false), 0)...);
+				pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(false), 0)...);
+#endif
 			}
 
 		}; // class Map

@@ -34,6 +34,12 @@ namespace skepu
     }
 
     template<typename T>
+    size_t Matrix<T>::part_size()
+    {
+        return this->partition.part_end() - this->partition.part_begin();
+    }
+
+    template<typename T>
     void Matrix<T>::allgather()
     {
         if (!this->dirty) return;
@@ -92,6 +98,24 @@ namespace skepu
     void Matrix<T>::flush_MPI()
     {
         this->allgather();
+    }
+
+    template<typename T>
+    void Matrix<T>::set_skeleton_iterator(bool val)
+    {
+        this->skeleton_iterator = val;
+    }
+
+    template<typename T>
+    void Matrix<T>::mark_dirty()
+    {
+        this->dirty = true;
+    }
+
+    template<typename T>
+    void Matrix<T>::mark_clean()
+    {
+        this->dirty = false;
     }
 }
 

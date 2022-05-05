@@ -209,6 +209,13 @@ namespace skepu
 		iterator begin();
 		iterator end();
 		strided_iterator stridedBegin(size_t n, int dir);
+
+		// related to running on cluster
+		iterator globalBegin();
+		const_iterator globalBegin() const;
+
+		iterator localBegin();
+		const_iterator localBegin() const;
 		
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -337,8 +344,16 @@ namespace skepu
 		skepu::cluster::Partition<T> partition{};
 		size_t part_begin();
 		size_t part_end();
+		size_t part_size();
 
 		bool dirty{false};
+
+		void mark_dirty();
+		void mark_clean();
+
+		bool skeleton_iterator{false};
+
+		void set_skeleton_iterator(bool val);
 
 		void partition_prepare();
 		void partition_prepare(size_t size);
@@ -493,6 +508,9 @@ namespace skepu
 		
 		T& operator()(const ssize_t index = 0)
 		{
+#ifdef SKEPU_MPI
+			this->m_parent.mark_dirty();
+#endif
 			return this->m_std_iterator[index * this->m_stride];
 		}
 		

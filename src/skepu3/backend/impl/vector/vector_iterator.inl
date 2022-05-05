@@ -3,7 +3,7 @@ namespace skepu
 	template <typename T>
 	Index1D VectorIterator<T>::getIndex() const
 	{
-		size_t index = *this - m_parent.begin();
+		size_t index = *this - m_parent.globalBegin();
 		return Index1D{index};
 	}
 	
@@ -51,6 +51,9 @@ namespace skepu
 	template <typename T>
 	T& VectorIterator<T>::operator()(const ssize_t index)
 	{
+#ifdef SKEPU_MPI
+		m_parent.mark_dirty();
+#endif
 		return m_std_iterator[index];
 	}
 	
@@ -65,6 +68,9 @@ namespace skepu
 	{
 		m_parent.updateHost();
 		m_parent.invalidateDeviceData();
+#ifdef SKEPU_MPI
+		m_parent.mark_dirty();
+#endif
 		return m_std_iterator[index];
 	}
 	

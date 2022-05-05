@@ -486,6 +486,16 @@ namespace skepu
 		const_iterator begin() const;
 		iterator begin(size_t row);
 		const_iterator begin(size_t row) const;
+
+		// Relates to cluster partitions
+		iterator globalBegin();
+		const_iterator globalBegin() const;
+		iterator globalBegin(size_t row);
+		const_iterator globalBegin(size_t row) const;
+
+		iterator localBegin();
+		const_iterator localBegin() const;
+		
 		
 		// These do nothing special for now
 		iterator stridedBegin(size_t, int) { return this->begin(); };
@@ -698,8 +708,16 @@ namespace skepu
 		skepu::cluster::Partition<T> partition{};
 		size_t part_begin();
 		size_t part_end();
+		size_t part_size();
 
 		bool dirty{false};
+
+		void mark_dirty();
+		void mark_clean();
+		
+		bool skeleton_iterator{false};
+
+		void set_skeleton_iterator(bool val);
 
 		void partition_prepare();
 		void partition_prepare(size_t major_dim, size_t minor_dims);

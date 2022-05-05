@@ -11,7 +11,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs> 
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::mapNumDevices_CL(size_t startIdx, size_t numDevices, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
+		::mapNumDevices_CL(size_t startIdx, size_t numDevices, size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
 		{
 			constexpr size_t numKernelArgs = numArgs + 3;
 			const size_t numElemPerSlice = size / numDevices;
@@ -70,7 +70,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs> 
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::CL(size_t startIdx, size_t size, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<AI...> ai, pack_indices<CI...> ci, CallArgs&&... args)
+		::CL(size_t startIdx, size_t size, int rank, int numRanks, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<AI...> ai, pack_indices<CI...> ci, CallArgs&&... args)
 		{
 			DEBUG_TEXT_LEVEL1("OpenCL Map: size = " << size << ", maxDevices = " << this->m_selected_spec->devices()
 				<< ", maxBlocks = " << this->m_selected_spec->GPUBlocks() << ", maxThreads = " << this->m_selected_spec->GPUThreads());
@@ -78,7 +78,7 @@ namespace skepu
 			const size_t numDevices = std::min(this->m_selected_spec->devices(), this->m_environment->m_devices_CL.size());
 			
 			// Same method is invoked no matter how many GPUs we use
-			this->mapNumDevices_CL(startIdx, numDevices, size, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
+			this->mapNumDevices_CL(startIdx, numDevices, size, rank, numRanks, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
 		}
 		
 	} // namespace backend

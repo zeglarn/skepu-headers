@@ -108,13 +108,7 @@ namespace skepu
 		static Type typeFromString(std::string s)
 		{
 			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-#ifdef SKEPU_MPI
-			// if (s == "cpu") return Type::CPU;
-			// if (s == "openmp") return Type::OpenMP;
-			
-			// SKEPU_WARNING("" << s << ": Selected backend not supported on clusters, selecting CPU-backend");
-			return Type::CPU;
-#endif
+
 			if (s == "cpu") return Type::CPU;
 			else if (s == "openmp") return Type::OpenMP;
 			else if (s == "opencl") return Type::OpenCL;

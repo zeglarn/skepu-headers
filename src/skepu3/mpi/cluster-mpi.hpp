@@ -229,6 +229,7 @@ namespace skepu
             int recvcount
         )
         {
+            // printf("static void allgather\n");
             if ( state::s() )
                 MPI_Allgather(
                     sendbuf,
@@ -249,6 +250,7 @@ namespace skepu
             const int *displacements
         )
         {
+            // printf("static void allgatherv\n");
             if ( state::s() )
                 MPI_Allgatherv(
                     sendbuf,
@@ -267,6 +269,7 @@ namespace skepu
             int *recvcounts,
             int *displacements)
         {
+            // printf("static void allgatherv_inplace\n");
             MPI_Allgatherv(
                 MPI_IN_PLACE,
                 0,
@@ -285,6 +288,7 @@ namespace skepu
             const void *sendbuffer
         )
         {
+            // printf("static void gather_to_root_inplace\n");
             int rank = mpi_rank();
             if (!rank)
             {
@@ -324,6 +328,7 @@ namespace skepu
             void *recvbuffer
             )
         {
+            // printf("static void scatter_from_root_inplace\n");
             int rank = mpi_rank();
             if (!rank)
             {

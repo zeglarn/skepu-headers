@@ -7,7 +7,7 @@ namespace skepu
 	template<typename T>
 	Index2D MatrixIterator<T>::getIndex() const
 	{
-		size_t index = *this - m_parent->begin();
+		size_t index = *this - m_parent->globalBegin();
 		size_t rows = index / m_parent->total_cols();
 		size_t cols = index % m_parent->total_cols();
 		return Index2D{rows, cols};
@@ -57,6 +57,9 @@ namespace skepu
 	template<typename T>
 	T& MatrixIterator<T>::operator()(const ssize_t index)
 	{
+#ifdef SKEPU_MPI
+		m_parent->mark_dirty();
+#endif
 		return m_std_iterator[index];
 	}
 
@@ -65,6 +68,9 @@ namespace skepu
 	{
 		m_parent->updateHost();
 		m_parent->invalidateDeviceData();
+#ifdef SKEPU_MPI
+		m_parent->mark_dirty();
+#endif
 		return m_std_iterator[(row*getParent().total_cols() + col)];
 	}
 	
@@ -89,6 +95,9 @@ namespace skepu
 	{
 		m_parent->updateHost();
 		m_parent->invalidateDeviceData();
+#ifdef SKEPU_MPI
+		m_parent->mark_dirty();
+#endif
 		return m_std_iterator[index];
 	}
 	

@@ -67,14 +67,14 @@ namespace skepu
 			T m_start{};
 			
 			
-			void CPU(Vector<T> &res, Matrix<T>& arg);
+			void CPU(VectorIterator<T> &res, MatrixIterator<T>& arg, size_t size);
 			
 			template<typename Iterator>
 			T CPU(size_t size, T &res, Iterator arg);
 			
 #ifdef SKEPU_OPENMP
 			
-			void OMP(Vector<T> &res, Matrix<T>& arg);
+			void OMP(VectorIterator<T> &res, MatrixIterator<T>& arg, size_t size);
 			
 			template<typename Iterator>
 			T OMP(size_t size, T &res, Iterator arg);
@@ -133,7 +133,15 @@ namespace skepu
 			template<template<class> class Container>
 			T operator()(Container<T> &arg)
 			{
+				// printf("T operator()(Container<T> &arg)\n");
+#ifdef SKEPU_MPI
+				arg.set_skeleton_iterator(true);
+				T ret = this->backendDispatch(arg.part_size(), arg.begin());
+				arg.set_skeleton_iterator(false);
+				return ret;
+#else
 				return this->backendDispatch(arg.size(), arg.begin());
+#endif
 			}
 		
 			template<typename Iterator>
@@ -146,15 +154,25 @@ namespace skepu
 			{
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
 				
-				const size_t size = arg.size();
+				const size_t m_size = arg.size();
 				
 				// TODO: check size
 				
-				this->selectBackend(size);
+				this->selectBackend(m_size);
+
+#ifdef SKEPU_MPI
+				res.set_skeleton_iterator(true);
+				arg.set_skeleton_iterator(true);
+
+				const size_t size = res.part_size();
+#else
+				const size_t size = res.size();
+#endif
 				
-				VectorIterator<T> it = res.begin();
 				Matrix<T> &arg_tr = (this->m_mode == ReduceMode::ColWise) ? arg.transpose(*this->m_selected_spec) : arg;
-				
+				MatrixIterator<T> arg_it = arg_tr.begin();
+				VectorIterator<T> it = res.begin();
+
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
@@ -164,22 +182,28 @@ namespace skepu
 #endif
 				case Backend::Type::CUDA:
 #ifdef SKEPU_CUDA
-					this->CU(it, arg_tr.begin(), arg_tr.total_rows());
+					this->CU(it, arg_it, size);
 					break;
 #endif
 				case Backend::Type::OpenCL:
 #ifdef SKEPU_OPENCL
-					this->CL(it, arg_tr.begin(), arg_tr.total_rows());
+					this->CL(it, arg_it, size);
 					break;
 #endif
 				case Backend::Type::OpenMP:
 #ifdef SKEPU_OPENMP
-					this->OMP(res, arg_tr);
+					this->OMP(it, arg_it, size);
 					break;
 #endif
 				default:
-					this->CPU(res, arg_tr);
+					this->CPU(it, arg_it, size);
+					// this->CPU(res, arg_tr);
 				}
+
+#ifdef SKEPU_MPI
+				res.set_skeleton_iterator(false);
+				arg.set_skeleton_iterator(false);
+#endif
 				
 				return res;
 			}
@@ -191,30 +215,58 @@ namespace skepu
 			//	assert(this->m_execPlan != NULL && this->m_execPlan->isCalibrated());
 				
 				T res = this->m_start;
+				T ret{};
 				
 				this->selectBackend(size);
+
+#ifdef SKEPU_MPI
+				const int rank = cluster::mpi_rank();
+				const int numRanks = cluster::mpi_size();
+
+				if (rank)
+				{
+					res = arg.getAddress()[0];
+					arg++;
+					if (size > 0)
+						size--;
+				}
+#endif
 				
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
 #ifdef SKEPU_HYBRID
-					return this->Hybrid(size, res, arg);
+					ret = this->Hybrid(size, res, arg);
+					break;
 #endif
 				case Backend::Type::CUDA:
 #ifdef SKEPU_CUDA
-					return this->CU(size, res, arg);
+					ret = this->CU(size, res, arg);
+					break;
 #endif
 				case Backend::Type::OpenCL:
 #ifdef SKEPU_OPENCL
-					return this->CL(size, res, arg);
+					ret = this->CL(size, res, arg);
+					break;
 #endif
 				case Backend::Type::OpenMP:
 #ifdef SKEPU_OPENMP
-					return this->OMP(size, res, arg);
+					ret = this->OMP(size, res, arg);
+					break;
 #endif
 				default:
-					return this->CPU(size, res, arg);
+					ret = this->CPU(size, res, arg);
 				}
+#ifdef SKEPU_MPI
+				size_t byteSize = sizeof(T);
+				std::vector<T> partsum(numRanks);
+				cluster::allgather(&ret, byteSize,&partsum[0],byteSize);
+
+				ret = partsum[0];
+				for (size_t i = 1; i < numRanks; i++)
+					ret = ReduceFunc::CPU(ret, partsum[i]);
+#endif
+				return ret;
 			}
 			
 			
@@ -259,11 +311,11 @@ namespace skepu
 			
 			
 		private:
-			T CPU(T &res, Matrix<T>& arg);
+			T CPU(MatrixIterator<T>& arg, size_t size);
 			
 #ifdef SKEPU_OPENMP
 			
-			T OMP(T &res, Matrix<T>& arg);
+			T OMP(MatrixIterator<T>& arg, size_t size);
 			
 #endif
 			
@@ -308,31 +360,64 @@ namespace skepu
 				this->selectBackend(arg.size());
 				
 				T res = this->m_start;
+				T ret{};
 				
 				Matrix<T> &arg_tr = (this->m_mode == ReduceMode::ColWise) ? arg.transpose(*this->m_selected_spec) : arg;
+#ifdef SKEPU_MPI
+				const int rank = cluster::mpi_rank();
+				const int numRanks = cluster::mpi_size();
+				arg_tr.set_skeleton_iterator(true);
+				size_t size = arg_tr.part_size();
+
+				auto it = arg_tr.begin();
+#else
+				const int rank = 0;
+				const int numRanks = 1;
+				auto it = arg_tr.begin();
+				size_t size = arg_tr.size();
+#endif
 				
 				
 				switch (this->m_selected_spec->activateBackend())
 				{
 				case Backend::Type::Hybrid:
 #ifdef SKEPU_HYBRID
-					return this->Hybrid(res, arg_tr);
+					ret = Hybrid(res, arg_tr);
+					break;
 #endif
 				case Backend::Type::CUDA:
 #ifdef SKEPU_CUDA
-					return this->CU(res, arg_tr.begin(), arg_tr.total_rows());
+					ret = CU(res, arg_tr.begin(), arg_tr.total_rows());
+					break;
 #endif
 				case Backend::Type::OpenCL:
 #ifdef SKEPU_OPENCL
-					return this->CL(res, arg_tr.begin(), arg_tr.total_rows());
+					ret = CL(res, arg_tr.begin(), arg_tr.total_rows());
+					break;
 #endif
 				case Backend::Type::OpenMP:
 #ifdef SKEPU_OPENMP
-					return this->OMP(res, arg_tr);
+					ret = OMP(it, size);
+					break;
 #endif
 				default:
-					return this->CPU(res, arg_tr);
+					ret = CPU(it, size);
 				}
+#ifdef SKEPU_MPI
+				arg_tr.set_skeleton_iterator(false);
+				size_t byteSize = sizeof(T);
+				std::vector<T> partsum(numRanks);
+				cluster::allgather(&ret, byteSize,&partsum[0],byteSize);
+
+				for (auto const &el : partsum)
+					res = ReduceFuncColWise::CPU(res,el);
+				// ret = partsum[0];
+				// for (size_t i = 1; i < numRanks; i++)
+				// 	ret = ReduceFuncColWise::CPU(ret, partsum[i]);
+#else
+				res = ReduceFuncColWise::CPU(res,ret);
+#endif
+				return res;
 			}
 			
 		};
