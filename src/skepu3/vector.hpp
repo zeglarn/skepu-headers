@@ -49,38 +49,40 @@ namespace skepu
 #endif
 		T &operator[](size_t index)
 		{
-#ifdef SKEPU_MPI
-			parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 			// printf("T&");
+// 			parent->dirty = true;
+// #endif
 			return this->data[index];
 		}
 
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
-		T  operator[](size_t index) const { return this->data[index]; }
+		T  operator[](size_t index) const { /*printf("T");*/ return this->data[index]; }
 		
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
 		T &operator()(size_t index)
 		{
-#ifdef SKEPU_MPI
-			parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 			// printf("T&");
+// 			parent->dirty = true;
+// #endif
 			return this->data[index];
 		}
 
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
-		T  operator()(size_t index) const { return this->data[index]; }
+		T  operator()(size_t index) const { /*printf("T");*/ return this->data[index]; }
 		
 		T *data;
 		size_t size;
-#ifdef SKEPU_MPI
-		ContainerType *parent;
-#endif
+// #ifdef SKEPU_MPI
+// 		ContainerType *parent;
+// #endif
 	};
 	
 	template <typename T>
@@ -190,9 +192,9 @@ namespace skepu
 		template<typename Ignore>
 		Vec<T> hostProxy(ProxyTag::Default, Ignore)
 		{	Vec<T> vec{this->m_data, this->m_size};
-#ifdef SKEPU_MPI
-			vec.parent = this;
-#endif
+// #ifdef SKEPU_MPI
+// 			vec.parent = this;
+// #endif
 			return vec;
 		}
 		
@@ -508,9 +510,9 @@ namespace skepu
 		
 		T& operator()(const ssize_t index = 0)
 		{
-#ifdef SKEPU_MPI
-			this->m_parent.mark_dirty();
-#endif
+// #ifdef SKEPU_MPI
+// 			this->m_parent.mark_dirty();
+// #endif
 			return this->m_std_iterator[index * this->m_stride];
 		}
 		

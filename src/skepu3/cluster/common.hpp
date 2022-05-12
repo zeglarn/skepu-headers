@@ -20,6 +20,7 @@
 #include <cassert>
 #include <algorithm>
 #include <functional>
+#include <type_traits>
 
 #include "../impl/backend.hpp"
 #include "../impl/meta_helpers.hpp"
@@ -298,6 +299,32 @@ struct cont
 			is_skepu_tensor3_proxy<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value ||
 			is_skepu_tensor4_proxy<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value>  {};
 
+	template<typename T>
+	struct is_const: 
+		std::integral_constant<bool,
+			std::is_const<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value> {};
+
+	// template<typename T>
+	// struct is_skepu_const_vector_proxy: std::false_type {};
+
+	// template<typename T>
+	// struct is_skepu_const_matrix_proxy: std::false_type {};
+
+	// template<typename T>
+	// struct is_skepu_const_tensor3_proxy: std::false_type {};
+
+	// template<typename T>
+	// struct is_skepu_const_tensor4_proxy: std::false_type {};
+
+
+	// template<typename T>
+	// struct is_skepu_const_container_proxy:
+	// 	std::integral_constant<bool,
+	// 		is_skepu_vector_proxy<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value ||
+	// 		is_skepu_matrix_proxy<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value ||
+	// 		is_skepu_tensor3_proxy<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value ||
+	// 		is_skepu_tensor4_proxy<typename std::remove_cv<typename std::remove_reference<T>::type>::type>::value>  {};
+	
 	// ----------------------------------------------------------------
 	// is_skepu_iterator trait class
 	// ----------------------------------------------------------------

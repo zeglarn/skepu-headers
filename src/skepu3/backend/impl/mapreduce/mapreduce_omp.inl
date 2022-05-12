@@ -15,7 +15,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
 		typename MapFunc::Ret MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>
-		::OMP(size_t size, size_t start, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
+		::OMP(size_t size, size_t globalSize, size_t start, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
 		{
 			// Sync with device data
 			pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().updateHost(), 0)...);
@@ -29,7 +29,7 @@ namespace skepu
 			bool first = true;
 			
 			size_t threads = std::min<size_t>(size, max_threads);
-			auto random = this->template prepareRandom<MapFunc::randomCount>(size, global_num_threads);
+			auto random = this->template prepareRandom<MapFunc::randomCount>(globalSize, global_num_threads);
 			
 			// Perform Map and partial Reduce with OpenMP
 			#pragma omp parallel firstprivate(first)
@@ -68,7 +68,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		template<size_t... OI, size_t... AI, size_t... CI, typename ...CallArgs>
 		typename MapFunc::Ret MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>
-		::OMP(size_t size, size_t start, int rank, int numRanks, pack_indices<OI...>, pack_indices<>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
+		::OMP(size_t size, size_t globalSize, size_t start, int rank, int numRanks, pack_indices<OI...>, pack_indices<>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
 		{
 			DEBUG_TEXT_LEVEL1("OpenMP MapReduce: size = " << size);
 			// Sync with device data
@@ -82,7 +82,7 @@ namespace skepu
 			bool first = true;
 			
 			size_t threads = std::min<size_t>(size, max_threads);
-			auto random = this->template prepareRandom<MapFunc::randomCount>(size, global_num_threads);
+			auto random = this->template prepareRandom<MapFunc::randomCount>(globalSize, global_num_threads);
 			
 			const size_t end = start + size;
 			// Perform Map and partial Reduce with OpenMP

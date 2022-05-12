@@ -463,9 +463,10 @@ namespace skepu
 	typename Vector<T>::iterator Vector<T>::localBegin()
 	{
 #ifdef SKEPU_MPI
-	return iterator(*this, this->m_data + this->partition.part_begin());
+		this->mark_dirty();
+		return iterator(*this, this->m_data + this->partition.part_begin());
 #else
-	return iterator(*this, this->m_data);
+		return iterator(*this, this->m_data);
 #endif
 	}
 
@@ -507,6 +508,7 @@ namespace skepu
 #ifdef SKEPU_MPI
 		if (this->skeleton_iterator)
 		{
+			this->mark_dirty();
 			auto m_d = &this->m_data[this->partition.part_begin()];
 			return strided_iterator(*this, &m_d[(s < 0) ? (-n + 1) * s : 0], s);
 		}

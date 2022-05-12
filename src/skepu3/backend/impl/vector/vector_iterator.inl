@@ -51,9 +51,6 @@ namespace skepu
 	template <typename T>
 	T& VectorIterator<T>::operator()(const ssize_t index)
 	{
-#ifdef SKEPU_MPI
-		m_parent.mark_dirty();
-#endif
 		return m_std_iterator[index];
 	}
 	
@@ -68,9 +65,6 @@ namespace skepu
 	{
 		m_parent.updateHost();
 		m_parent.invalidateDeviceData();
-#ifdef SKEPU_MPI
-		m_parent.mark_dirty();
-#endif
 		return m_std_iterator[index];
 	}
 	

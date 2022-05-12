@@ -44,7 +44,7 @@ namespace skepu
     {
         if (!this->dirty) return;
 
-        this->dirty = false;
+        this->mark_dirty();
 
 #ifdef SKEPU_MPI_DEBUG
         if (!cluster::mpi_rank())

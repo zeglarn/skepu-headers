@@ -7,16 +7,30 @@ namespace skepu
         // If there is a possibility of reading across partitions, all
                 // processes get full copy.
 
-        template<typename Container_t, typename ProxyTag>
-        void handle_container_arg(Container_t & c, ProxyTag) noexcept
+        // template<typename Container_t, typename ProxyTag>
+        // void handle_container_arg(Container_t & c, ProxyTag) noexcept
+        // {
+        //     c.allgather();
+        // }
+
+        template<typename Container, typename ProxyTag>
+        void handle_container_arg(Container & c, ProxyTag) noexcept
         {
             c.allgather();
         }
 
 
-        template<typename Container_t>
-        void handle_container_arg(Container_t, skepu::ProxyTag::MatRow)
+        template<typename Container>
+        void handle_container_arg(Container, ProxyTag::MatRow)
         { }
+
+        template<typename Container>
+        void handle_read_write_access(Container &c, AccessMode mode)
+        {
+            if (hasWriteAccess(mode))
+                c.mark_dirty();
+        }
+
 
 
 

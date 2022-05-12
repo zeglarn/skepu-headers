@@ -37,18 +37,18 @@ namespace skepu
 		T *data;
 		size_t rows;
 		size_t cols;
-#ifdef SKEPU_MPI
-		ContainerType *parent;
-#endif
+// #ifdef SKEPU_MPI
+// 		ContainerType *parent;
+// #endif
 		
 #ifdef SKEPU_CUDA
 		__host__ __device__
 #endif
 		T &operator[](size_t index)
 		{
-#ifdef SKEPU_MPI
-			parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 			parent->dirty = true;
+// #endif
 			return this->data[index];
 		}
 #ifdef SKEPU_CUDA
@@ -61,9 +61,9 @@ namespace skepu
 #endif
 		T &operator()(size_t i, size_t j)
 		{
-#ifdef SKEPU_MPI
-			parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 			parent->dirty = true;
+// #endif
 			return this->data[i * this->cols + j];
 		}
 #ifdef SKEPU_CUDA
@@ -80,18 +80,18 @@ namespace skepu
 		
 		T *data;
 		size_t cols;
-#ifdef SKEPU_MPI
-		ContainerType *parent;
-#endif
+// #ifdef SKEPU_MPI
+// 		ContainerType *parent;
+// #endif
 
 		#ifdef SKEPU_CUDA
 		__host__ __device__
 		#endif
 		T &operator[](size_t index)
 		{
-#ifdef SKEPU_MPI
-			parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 			parent->dirty = true;
+// #endif
 			return this->data[index];
 		}
 
@@ -105,9 +105,9 @@ namespace skepu
 		#endif
 				T &operator()(size_t index)
 				{
-#ifdef SKEPU_MPI
-					parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 					parent->dirty = true;
+// #endif
 					return this->data[index];
 				}
 		#ifdef SKEPU_CUDA
@@ -125,18 +125,18 @@ namespace skepu
 		
 		T *data;
 		size_t rows, cols;
-#ifdef SKEPU_MPI
-		ContainerType *parent;
-#endif
+// #ifdef SKEPU_MPI
+// 		ContainerType *parent;
+// #endif
 		
 		#ifdef SKEPU_CUDA
 		__host__ __device__
 		#endif
 		T &operator[](size_t index)
 		{
-#ifdef SKEPU_MPI
-			parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 			parent->dirty = true;
+// #endif
 			return this->data[index * this->cols];
 		}
 		
@@ -150,9 +150,9 @@ namespace skepu
 		#endif
 				T &operator()(size_t index)
 				{
-#ifdef SKEPU_MPI
-					parent->dirty = true;
-#endif
+// #ifdef SKEPU_MPI
+// 					parent->dirty = true;
+// #endif
 					return this->data[index * this->cols];
 				}
 		#ifdef SKEPU_CUDA
@@ -330,21 +330,37 @@ namespace skepu
 		// highly dangerous, use with care.
 		T *getAddress()
 		{
+#ifdef SKEPU_MPI
+			if (skeleton_iterator)
+				return this->m_data + this->part_begin();
+#endif
 			return this->m_data;
 		}
 		
 		T *data()
 		{
+#ifdef SKEPU_MPI
+			if (skeleton_iterator)
+				return this->m_data + this->part_begin();
+#endif
 			return this->m_data;
 		}
 		
 		const T *getAddress() const
 		{
+#ifdef SKEPU_MPI
+			if (skeleton_iterator)
+				return this->m_data + this->part_begin();
+#endif
 			return this->m_data;
 		}
 		
 		const T *data() const
 		{
+#ifdef SKEPU_MPI
+			if (skeleton_iterator)
+				return this->m_data + this->part_begin();
+#endif
 			return this->m_data;
 		}
 		
@@ -355,9 +371,9 @@ namespace skepu
 			proxy.data = this->m_data;
 			proxy.rows = this->m_rows;
 			proxy.cols = this->m_cols;
-#ifdef SKEPU_MPI
-			proxy.parent = this;
-#endif
+// #ifdef SKEPU_MPI
+// 			proxy.parent = this;
+// #endif
 			return proxy;
 		}
 		
@@ -373,9 +389,9 @@ namespace skepu
 			MatRow<T> proxy;
 			proxy.data = this->m_data + r * this->m_cols;
 			proxy.cols = this->m_cols;
-#ifdef SKEPU_MPI
-			proxy.parent = this;
-#endif
+// #ifdef SKEPU_MPI
+// 			proxy.parent = this;
+// #endif
 			return proxy;
 		}
 		
@@ -398,9 +414,9 @@ namespace skepu
 			proxy.data = this->m_data + c;
 			proxy.rows = this->m_rows;
 			proxy.cols = this->m_cols;
-#ifdef SKEPU_MPI
-			proxy.parent = this;
-#endif
+// #ifdef SKEPU_MPI
+// 			proxy.parent = this;
+// #endif
 			return proxy;
 		}
 		

@@ -13,7 +13,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs> 
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::OMP(size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
+		::OMP(size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
 		{
 			DEBUG_TEXT_LEVEL1("OpenMP Map: size = " << size);
 			
@@ -29,7 +29,7 @@ namespace skepu
 			const int max_threads = omp_get_max_threads();
 			const int global_num_threads = numRanks * max_threads;
 
-			auto random = this->template prepareRandom<MapFunc::randomCount>(size, global_num_threads);
+			auto random = this->template prepareRandom<MapFunc::randomCount>(globalSize, global_num_threads);
 			#pragma omp parallel num_threads(max_threads)
 			{
 				int global_tid = rank * max_threads + omp_get_thread_num();

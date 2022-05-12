@@ -162,6 +162,7 @@ namespace skepu
 
 #ifdef SKEPU_MPI
 				res.set_skeleton_iterator(true);
+				res.mark_dirty();
 				arg.set_skeleton_iterator(true);
 
 				const size_t size = res.part_size();

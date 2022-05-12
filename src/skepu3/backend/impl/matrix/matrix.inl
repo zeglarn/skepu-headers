@@ -440,7 +440,7 @@ typename Matrix<T>::iterator Matrix<T>::globalBegin(size_t row)
 template <typename T>
 typename Matrix<T>::const_iterator Matrix<T>::globalBegin() const
 {
-   return iterator(this, this->m_data);
+   return const_iterator(this, this->m_data);
 }
 
 template <typename T>
@@ -450,13 +450,14 @@ typename Matrix<T>::const_iterator Matrix<T>::globalBegin(size_t row) const
    {
       SKEPU_ERROR("ERROR! Row index is out of bound!");
    }
-   return iterator(this, this->m_data + row * this->m_cols);
+   return const_iterator(this, this->m_data + row * this->m_cols);
 }
 
 template <typename T>
 typename Matrix<T>::iterator Matrix<T>::localBegin()
 {
 #ifdef SKEPU_MPI
+   this->mark_dirty();
    return iterator(this, this->m_data + this->partition.part_begin());
 #else
    return iterator(this, this->m_data);
@@ -467,9 +468,9 @@ template <typename T>
 typename Matrix<T>::const_iterator Matrix<T>::localBegin() const
 {
 #ifdef SKEPU_MPI
-   return iterator(this, this->m_data + this->partition.part_begin());
+   return const_iterator(this, this->m_data + this->partition.part_begin());
 #else
-   return iterator(this, this->m_data);
+   return const_iterator(this, this->m_data);
 #endif
 }
 
