@@ -15,8 +15,21 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::mapSingleThread_CU(size_t deviceID, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
+		::mapSingleThread_CU(size_t deviceID, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
 		{
+			// if (!rank)
+			// {
+			// 	printf("#########################\n");
+			// 	printf("mapSingleThread_CU\n");
+			// 	printf("deviceID=%ld\n",deviceID);
+			// 	printf("startIdx=%ld\n",startIdx);
+			// 	printf("size=%ld\n",size);
+			// 	printf("globalSize=%ld\n",globalSize);
+			// 	printf("rank=%ld\n",rank);
+			// 	printf("numRanks=%ld\n",numRanks);
+			// 	printf("#########################\n\n");
+
+			// }
 			auto oArgs = std::forward_as_tuple(get<OI>(std::forward<CallArgs>(args)...)...);
 			auto eArgs = std::forward_as_tuple(get<EI>(std::forward<CallArgs>(args)...)...);
 			auto aArgs = std::forward_as_tuple(get<AI>(std::forward<CallArgs>(args)...)...);
@@ -74,8 +87,16 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::mapMultiStream_CU(size_t deviceID, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
+		::mapMultiStream_CU(size_t deviceID, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
 		{
+			// if (!rank)
+			// {
+			// 	printf("#########################\n");
+			// 	printf("mapMultiStream_CU\n");
+			// 	printf("#########################\n\n");
+
+			// }
+			// printf("mapMultiStream_CU\n");
 			CHECK_CUDA_ERROR(cudaSetDevice(deviceID));
 			size_t numKernels = std::min<size_t>(this->m_environment->m_devices_CU.at(deviceID)->getNoConcurrentKernels(), size);
 			size_t numElemPerSlice = size / numKernels;
@@ -164,8 +185,15 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::mapMultiStreamMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
+		::mapMultiStreamMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
 		{
+			// if (!rank)
+			// {
+			// 	printf("#########################\n");
+			// 	printf("mapMultiStreamMultiGPU_CU\n");
+			// 	printf("#########################\n\n");
+
+			// }
 #ifdef USE_PINNED_MEMORY
 			const size_t numElemPerDevice = size / useNumGPU;
 			const size_t deviceRest = size % useNumGPU;
@@ -270,8 +298,15 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::mapSingleThreadMultiGPU_CU(size_t numDevices, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
+		::mapSingleThreadMultiGPU_CU(size_t numDevices, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
 		{
+			// if (!rank)
+			// {
+			// 	printf("#########################\n");
+			// 	printf("mapSingleThreadMultiGPU_CU\n");
+			// 	printf("#########################\n\n");
+
+			// }
 			const size_t numElemPerSlice = size / numDevices;
 			const size_t rest = size % numDevices;
 			
@@ -352,7 +387,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
 		void Map<arity, MapFunc, CUDAKernel, CLKernel>
-		::CUDA(size_t startIdx, size_t size, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<AI...> ai, pack_indices<CI...> ci, CallArgs&&... args)
+		::CUDA(size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<AI...> ai, pack_indices<CI...> ci, CallArgs&&... args)
 		{
 			DEBUG_TEXT_LEVEL1("CUDA Map: size = " << size << ", maxDevices = " << this->m_selected_spec->devices()
 				<< ", maxBlocks = " << this->m_selected_spec->GPUBlocks() << ", maxThreads = " << this->m_selected_spec->GPUThreads());
@@ -367,11 +402,11 @@ namespace skepu
 				
 				// Checks whether or not the GPU supports MemoryTransfer/KernelExec overlapping, if not call mapSingleThread function
 				if (this->m_environment->m_devices_CU.at(m_environment->bestCUDADevID)->isOverlapSupported())
-					return this->mapMultiStream_CU(this->m_environment->bestCUDADevID, startIdx, size, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
+					return this->mapMultiStream_CU(this->m_environment->bestCUDADevID, startIdx, size, globalSize, rank, numRanks, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
 				
 #endif // USE_PINNED_MEMORY
 				
-				return this->mapSingleThread_CU(this->m_environment->bestCUDADevID, startIdx, size, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
+				return this->mapSingleThread_CU(this->m_environment->bestCUDADevID, startIdx, size, globalSize, rank, numRanks, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
 			}
 			
 #endif // SKEPU_DEBUG_FORCE_MULTI_GPU_IMPL
@@ -381,11 +416,11 @@ namespace skepu
 			// if pinned memory is used but the device does not support overlap the function continues with the previous implementation.
 			// if the multistream version is being used the function will exit at this point.
 			if (this->m_environment->supportsCUDAOverlap())
-				return this->mapMultiStreamMultiGPU_CU(numDevices, startIdx, size, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
+				return this->mapMultiStreamMultiGPU_CU(numDevices, startIdx, size, globalSize, rank, numRanks, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
 			
 #endif // USE_PINNED_MEMORY
 			
-			this->mapSingleThreadMultiGPU_CU(numDevices, startIdx, size, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
+			this->mapSingleThreadMultiGPU_CU(numDevices, startIdx, size, globalSize, rank, numRanks, oi, ei, ai, ci, std::forward<CallArgs>(args)...);
 		}
 	} // namespace backend
 } // namespace skepu

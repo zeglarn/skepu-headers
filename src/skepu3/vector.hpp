@@ -352,6 +352,7 @@ namespace skepu
 
 		void mark_dirty();
 		void mark_clean();
+		bool is_dirty() const;
 
 		bool skeleton_iterator{false};
 

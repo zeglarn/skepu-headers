@@ -9,7 +9,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename CUDAKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs> 
 		void Map<arity, MapFunc, CUDAKernel, CLKernel> 
-		::CPU(size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
+		::CPU(size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args)
 		{
 			DEBUG_TEXT_LEVEL1("CPU Map: size = " << size);
 			
@@ -23,7 +23,7 @@ namespace skepu
 			auto rank_random = this->template prepareRandom<MapFunc::randomCount>(globalSize,numRanks);
 			auto random = rank_random(rank);
 
-			for (size_t i = 0; i < size; ++i)
+			for (size_t i = startIdx; i < startIdx + size; ++i)
 			{
 				auto index = (get<0>(std::forward<CallArgs>(args)...) + i).getIndex();
 				auto res = F::forward(MapFunc::CPU, index, random,

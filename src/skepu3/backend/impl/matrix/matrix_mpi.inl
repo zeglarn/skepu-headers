@@ -22,19 +22,19 @@ namespace skepu
     }
 
     template<typename T>
-    size_t Matrix<T>::part_begin()
+    size_t Matrix<T>::part_begin() const
     {
         return this->partition.part_begin();
     }
 
     template<typename T>
-    size_t Matrix<T>::part_end()
+    size_t Matrix<T>::part_end() const
     {
         return this->partition.part_end();
     }
 
     template<typename T>
-    size_t Matrix<T>::part_size()
+    size_t Matrix<T>::part_size() const
     {
         return this->partition.part_end() - this->partition.part_begin();
     }
@@ -42,15 +42,6 @@ namespace skepu
     template<typename T>
     void Matrix<T>::allgather()
     {
-        if (!this->dirty) return;
-
-        this->mark_dirty();
-
-#ifdef SKEPU_MPI_DEBUG
-        if (!cluster::mpi_rank())
-            std::cout << "<<<[ " << this->getName() << " is running allgather. ]>>>\n";
-#endif
-
         skepu::cluster::allgatherv_inplace(
             this->m_data,
             this->partition.byte_counts,
@@ -117,6 +108,14 @@ namespace skepu
     {
         this->dirty = false;
     }
+
+    template<typename T>
+    bool Matrix<T>::is_dirty() const
+    {
+        return this->dirty;
+    }
+
+
 }
 
 

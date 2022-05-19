@@ -114,14 +114,19 @@ namespace skepu
                 prepare(len, 1);
             }
 
-            size_t part_begin()
+            size_t part_begin() const
             {
                 return displs[rank];
             }
 
-            size_t part_end() 
+            size_t part_end() const
             { 
                 return displs[rank] + counts[rank]; 
+            }
+
+            size_t part_size() const
+            { 
+                return counts[rank]; 
             }
         };
         

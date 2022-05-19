@@ -722,14 +722,15 @@ namespace skepu
 #ifdef SKEPU_MPI
 	public:
 		skepu::cluster::Partition<T> partition{};
-		size_t part_begin();
-		size_t part_end();
-		size_t part_size();
+		size_t part_begin() const;
+		size_t part_end() const;
+		size_t part_size() const;
 
 		bool dirty{false};
 
 		void mark_dirty();
 		void mark_clean();
+		bool is_dirty() const;
 		
 		bool skeleton_iterator{false};
 

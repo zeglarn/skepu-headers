@@ -107,6 +107,7 @@ private:
          { 0x21, 48 }, // Fermi Generation (SM 2.1) GF10x class
          { 0x30, 192}, // Fermi Generation (SM 3.0) GK10x class
          { 0x35, 192}, // ???
+         { 0x75, 128}, // ???
          {   -1, -1 }
       };
 
@@ -118,6 +119,7 @@ private:
 
          index++;
       }
+      printf("<<<%X>>>\n",((major << 4) + minor));
       SKEPU_WARNING("MapSMtoCores undefined SMversion " << major << "," << minor << "\n");
       return -1;
    }
@@ -149,11 +151,12 @@ private:
          { 0x20,  4 }, // Fermi Generation (SM 2.0) GF100 class
          { 0x21, 16 }, // Fermi Generation (SM 2.1) GF10x class
          { 0x30, 16}, // Kepler Generation (SM 3.0) GK10x class
-				 { 0x32, 4}, // special kepler? (SM 3.2)
-				 { 0x35, 32}, // Kepler Generation (SM 3.5) GK11x class
-				 { 0x37, 32}, // (SM 3.7)  
-				 { 0x50, 32}, // Maxwell Generation (SM 5.0) GM10x class 
-				 { 0x52, 32}, // Maxwell Generation (SM 5.2) GM20x class
+         { 0x32, 4}, // special kepler? (SM 3.2)
+         { 0x35, 32}, // Kepler Generation (SM 3.5) GK11x class
+         { 0x37, 32}, // (SM 3.7)  
+         { 0x50, 32}, // Maxwell Generation (SM 5.0) GM10x class 
+         { 0x52, 32}, // Maxwell Generation (SM 5.2) GM20x class
+         { 0x75, 32}, // Maxwell Generation (SM 5.2) GM20x class
          {   -1, 1 }
       };
 
@@ -165,6 +168,7 @@ private:
 
          index++;
       }
+      printf("<<<%X>>>\n",((major << 4) + minor));
       SKEPU_WARNING("MapSMtoCores undefined SMversion " << major << "," << minor << "\n");
       return 1;
    }

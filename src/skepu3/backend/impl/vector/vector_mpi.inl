@@ -117,6 +117,12 @@ namespace skepu
     {
         this->dirty = false;
     }
+
+    template<typename T>
+    bool Vector<T>::is_dirty() const
+    {
+        return this->dirty;
+    }
 }
 
 

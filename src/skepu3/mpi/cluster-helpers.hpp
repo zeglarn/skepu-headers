@@ -16,7 +16,13 @@ namespace skepu
         template<typename Container, typename ProxyTag>
         void handle_container_arg(Container & c, ProxyTag) noexcept
         {
+            if (!c.is_dirty()) return;
+            
+            c.updateHost();
+            // c.invalidateDeviceData();
+
             c.allgather();
+            c.mark_clean();
         }
 
 
@@ -38,6 +44,7 @@ namespace skepu
         template<typename Container>
         void gather_to_root(Container & c)
         {
+            c.getParent().updateHost();
             c.getParent().gather_to_root();
         }
 
@@ -45,6 +52,7 @@ namespace skepu
         void scatter_from_root(Container & c)
         {
             c.getParent().scatter_from_root();
+            c.getParent().invalidateDeviceData();
         }
 
         // Else each process gets only its local partition to work

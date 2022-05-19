@@ -114,13 +114,14 @@ namespace skepu
 		typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
 		::CPU(MatrixIterator<T>& arg, size_t size)
 		{
-			DEBUG_TEXT_LEVEL1("CPU Reduce (2D): rows = " << rows << ", cols = " << cols << "\n");
 			
 			// Make sure we are properly synched with device data
 			arg.getParent().updateHost();
 			
 			const size_t cols = arg.getParent().total_cols();
 			const size_t rows = size/cols;
+			
+			DEBUG_TEXT_LEVEL1("CPU Reduce (2D): rows = " << rows << ", cols = " << cols << "\n");
 			
 			T *data = arg.getAddress();
 

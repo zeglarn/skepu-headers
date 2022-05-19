@@ -107,13 +107,13 @@ namespace skepu
 			// ==========================    Implementation     ==========================
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void CPU(size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void CPU(size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 
 #ifdef SKEPU_OPENMP
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
-			void OMP(size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void OMP(size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 #endif // SKEPU_OPENMP
 
@@ -121,19 +121,19 @@ namespace skepu
 #ifdef SKEPU_CUDA
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void CUDA(size_t startIdx, size_t size, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void CUDA(size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
-			void         mapSingleThread_CU(size_t deviceID, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void         mapSingleThread_CU(size_t deviceID, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
-			void          mapMultiStream_CU(size_t deviceID, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void          mapMultiStream_CU(size_t deviceID, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs>
-			void mapSingleThreadMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void mapSingleThreadMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 			template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs>
-			void  mapMultiStreamMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
+			void  mapMultiStreamMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t size, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, CallArgs&&... args);
 
 #endif // SKEPU_CUDA
 
@@ -167,20 +167,24 @@ namespace skepu
 					SKEPU_ERROR("Non-matching input container sizes");
 
 				this->selectBackend(size);
+				
 				size_t globalSize{size};
+				size_t startIdx{0};
 
 #ifdef SKEPU_MPI
 				const int rank = cluster::mpi_rank();
 				const int numRanks = cluster::mpi_size();
 
-				pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
-				pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
+				// set
+				// pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
+				// pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
 
 				pack_expand((cluster::handle_container_arg(get<AI>(std::forward<CallArgs>(args)...).getParent(),std::get<AI-arity-outArity>(typename MapFunc::ProxyTags{})), 0)...);
 				pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().mark_dirty(), 0)...);
 				pack_expand((cluster::handle_read_write_access(get<AI>(std::forward<CallArgs>(args)...).getParent(),MapFunc::anyAccessMode[AI-arity-outArity]), 0)...);
 				
 				size = get<0>(std::forward<CallArgs>(args)...).getParent().part_size();
+				startIdx = get<0>(std::forward<CallArgs>(args)...).getParent().part_begin();
 #else
 				const int rank = 0;
 				const int numRanks = 1;
@@ -194,15 +198,15 @@ namespace skepu
 						get<OI>(std::forward<CallArgs>(args)...).begin()...,
 						get<EI>(std::forward<CallArgs>(args)...).begin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
-						get<CI>(std::forward<CallArgs>(args)...)..
+						get<CI>(std::forward<CallArgs>(args)...)...
 					);
 					break;
 #endif
 				case Backend::Type::CUDA:
 #ifdef SKEPU_CUDA
-					this->CUDA(0, size, rank, numRanks, oi, ei, ai, ci,
-						get<OI>(std::forward<CallArgs>(args)...).begin()...,
-						get<EI>(std::forward<CallArgs>(args)...).begin()...,
+					this->CUDA(startIdx, size, globalSize, rank, numRanks, oi, ei, ai, ci,
+						get<OI>(std::forward<CallArgs>(args)...).globalBegin()...,
+						get<EI>(std::forward<CallArgs>(args)...).globalBegin()...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
 						get<CI>(std::forward<CallArgs>(args)...)...
 					);
@@ -220,7 +224,7 @@ namespace skepu
 #endif
 				case Backend::Type::OpenMP:
 #ifdef SKEPU_OPENMP
-					this->OMP(size, globalSize, rank, numRanks, oi, ei, ai, ci,
+					this->OMP(startIdx, size, globalSize, rank, numRanks, oi, ei, ai, ci,
 						get<OI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[OI])...,
 						get<EI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[EI])...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
@@ -229,7 +233,7 @@ namespace skepu
 					break;
 #endif
 				default:
-					this->CPU(size, globalSize, rank, numRanks, oi, ei, ai, ci,
+					this->CPU(startIdx, size, globalSize, rank, numRanks, oi, ei, ai, ci,
 						get<OI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[OI])...,
 						get<EI>(std::forward<CallArgs>(args)...).stridedBegin(size, this->m_strides[EI])...,
 						get<AI>(std::forward<CallArgs>(args)...)...,
@@ -238,8 +242,8 @@ namespace skepu
 					break;
 				}
 #ifdef SKEPU_MPI
-				pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(false), 0)...);
-				pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(false), 0)...);
+				// pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(false), 0)...);
+				// pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(false), 0)...);
 #endif
 			}
 

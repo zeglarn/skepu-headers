@@ -6,6 +6,10 @@
 
 #include <starpu_mpi.h>
 
+#ifdef SKEPU_CUDA
+#include <starpu_cuda.h>
+#endif
+
 #include "skepu3/cluster/common.hpp"
 #include "skepu3/cluster/containers/proxies.hpp"
 #include "skeleton_base.hpp"

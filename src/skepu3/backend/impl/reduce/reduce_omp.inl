@@ -42,10 +42,11 @@ namespace skepu
 		void Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::OMP(VectorIterator<T> &res, MatrixIterator<T>& arg, size_t size)
 		{
-			DEBUG_TEXT_LEVEL1("OpenMP Reduce (Matrix 1D): rows = " << rows << ", cols = " << cols << "\n");
 			
 			const size_t cols = arg.getParent().total_cols();
+			const size_t rows = arg.getParent().total_rows();
 			
+			DEBUG_TEXT_LEVEL1("OpenMP Reduce (Matrix 1D): rows = " << rows << ", cols = " << cols << "\n");
 			// Make sure we are properly synched with device data
 			arg.getParent().updateHost();
 			T *data = arg.getAddress();
