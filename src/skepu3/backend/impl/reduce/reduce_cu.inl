@@ -20,6 +20,7 @@ namespace skepu
 		void Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::reduceSingleThreadOneDim_CU(size_t deviceID, VectorIterator<T> &res, const MatrixIterator<T> &arg, size_t numRows)
 		{
+			// printf("::reduceSingleThreadOneDim_CU(size_t deviceID, VectorIterator<T> &res, const MatrixIterator<T> &arg, size_t numRows)\n");
 			cudaSetDevice(deviceID);
 			Device_CU *device = this->m_environment->m_devices_CU[deviceID];
 			unsigned int maxKernelsSupported = device->getNoConcurrentKernels();
@@ -71,6 +72,7 @@ namespace skepu
 		void Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::reduceMultipleOneDim_CU(size_t numDevices, VectorIterator<T> &res, const MatrixIterator<T> &arg, size_t numRows)
 		{
+			// printf("::reduceMultipleOneDim_CU(size_t numDevices, VectorIterator<T> &res, const MatrixIterator<T> &arg, size_t numRows)\n");
 			const size_t rows = numRows;
 			const size_t cols = arg.getParent().total_cols();
 			const size_t numRowsPerSlice = rows / numDevices;
@@ -157,6 +159,7 @@ namespace skepu
 		void Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::CU(VectorIterator<T> &res, const MatrixIterator<T>& arg, size_t numRows)
 		{
+			// printf("CU(VectorIterator<T> &res, const MatrixIterator<T>& arg, size_t numRows)\n");
 			DEBUG_TEXT_LEVEL1("CUDA Reduce (Matrix 1D): rows = " << numRows << ", cols = " << arg.getParent().total_cols()
 				<< ", maxDevices = " << this->m_selected_spec->devices() << ", maxBlocks = " << this->m_selected_spec->GPUBlocks()
 				<< ", maxThreads = " << this->m_selected_spec->GPUThreads());
@@ -185,6 +188,7 @@ namespace skepu
 		typename ReduceFunc::Ret Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::reduceSingleThread_CU(size_t deviceID, size_t size, T &res, Iterator arg)
 		{
+			// printf("::reduceSingleThread_CU(size_t deviceID, size_t size, T &res, Iterator arg)\n");
 			cudaSetDevice(deviceID);
 			Device_CU *device = this->m_environment->m_devices_CU[deviceID];
 			const size_t maxBlocks = this->m_selected_spec->GPUBlocks();
@@ -218,6 +222,7 @@ namespace skepu
 		typename ReduceFunc::Ret Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::reduceMultiple_CU(size_t numDevices, size_t size, T &res, Iterator arg)
 		{
+			// printf("::reduceMultiple_CU(size_t numDevices, size_t size, T &res, Iterator arg)\n");
 			const size_t numElemPerSlice = size / numDevices;
 			const size_t rest = size % numDevices;
 			const size_t maxBlocks = this->m_selected_spec->GPUBlocks();
@@ -308,6 +313,7 @@ namespace skepu
 		typename ReduceFunc::Ret Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::CU(size_t size, T &res, Iterator arg)
 		{
+			// printf("CU(size_t size, T &res, Iterator arg)\n");
 			DEBUG_TEXT_LEVEL1("CUDA Reduce: size = " << size << ", maxDevices = " << this->m_selected_spec->devices()
 				<< ", maxBlocks = " << this->m_selected_spec->GPUBlocks() << ", maxThreads = " << this->m_selected_spec->GPUThreads());
 			
@@ -334,6 +340,7 @@ namespace skepu
 		typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
 		::reduceSingleThread_CU(size_t deviceID, T &res, const MatrixIterator<T>& arg, size_t numRows)
 		{
+			// printf("::reduceSingleThread_CU(size_t deviceID, T &res, const MatrixIterator<T>& arg, size_t numRows)\n");
 			cudaSetDevice(deviceID);
 			Device_CU *device = this->m_environment->m_devices_CU[deviceID];
 			const size_t maxKernelsSupported = device->getNoConcurrentKernels();
@@ -353,7 +360,8 @@ namespace skepu
 			// Copies "all" elements to the device at once, better?
 			typename Matrix<T>::device_pointer_type_cu in_mem_p = arg.getParent().updateDevice_CU(arg.getAddress(), size, deviceID, AccessMode::Read);
 			
-			cutilSafeCall(cudaStreamSynchronize(device->m_streams[0]));
+			// cutilSafeCall(cudaStreamSynchronize(device->m_streams[0]));
+			// // printf("got here!\n");
 			
 			// Manually allocate output memory in this case, if only 1 block allocate for two
 			T *deviceMemPointer;
@@ -435,6 +443,7 @@ namespace skepu
 		typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
 		::reduceMultiple_CU(size_t numDevices, T &res, const MatrixIterator<T>& arg, size_t numRows)
 		{
+			// printf("::reduceMultiple_CU(size_t numDevices, T &res, const MatrixIterator<T>& arg, size_t numRows)");
 			const size_t rows = numRows;
 			const size_t cols = arg.getParent().total_cols();
 			const size_t numRowsPerSlice = rows / numDevices;
@@ -563,6 +572,7 @@ namespace skepu
 		typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
 		::CU(T &res, const MatrixIterator<T>& arg, size_t numRows)
 		{
+			// printf("::CU(T &res, const MatrixIterator<T>& arg, size_t numRows)\n");
 			DEBUG_TEXT_LEVEL1("CUDA Reduce (2D): size = " << arg.getParent().size() << ", maxDevices = " << this->m_selected_spec->devices()
 				<< ", maxBlocks = " << this->m_selected_spec->GPUBlocks() << ", maxThreads = " << this->m_selected_spec->GPUThreads());
 			

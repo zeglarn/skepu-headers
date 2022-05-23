@@ -36,6 +36,7 @@ namespace skepu
 		void Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::CPU(VectorIterator<T> &res, MatrixIterator<T>& arg, size_t size)
 		{
+			// printf("::CPU(VectorIterator<T> &res, MatrixIterator<T>& arg, size_t size)\n");
 			DEBUG_TEXT_LEVEL1("CPU Reduce (Matrix 1D): rows = " << arg.total_rows() << ", cols = " << arg.total_cols() << "\n");
 			
 			// Make sure we are properly synched with device data
@@ -63,6 +64,7 @@ namespace skepu
 		typename ReduceFunc::Ret Reduce1D<ReduceFunc, CUDAKernel, CLKernel>
 		::CPU(size_t size, T &res, Iterator arg)
 		{
+			// printf("::CPU(size_t size, T &res, Iterator arg)\n");
 			DEBUG_TEXT_LEVEL1("CPU Reduce (1D): size = " << size << "\n");
 			
 			// Make sure we are properly synched with device data
@@ -114,7 +116,7 @@ namespace skepu
 		typename ReduceFuncRowWise::Ret Reduce2D<ReduceFuncRowWise, ReduceFuncColWise, CUDARowWise, CUDAColWise, CLKernel>
 		::CPU(MatrixIterator<T>& arg, size_t size)
 		{
-			
+			// printf("::CPU(MatrixIterator<T>& arg, size_t size)\n");
 			// Make sure we are properly synched with device data
 			arg.getParent().updateHost();
 			

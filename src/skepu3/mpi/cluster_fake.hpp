@@ -10,7 +10,7 @@ namespace skepu
 	namespace cluster
 	{
 		static size_t mpi_rank() { return 0; }
-        static size_t mpi_size() { return 0; }
+        static size_t mpi_size() { return 1; }
 
         static void barrier()
         { }

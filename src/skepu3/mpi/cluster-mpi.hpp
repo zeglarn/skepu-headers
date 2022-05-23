@@ -69,28 +69,49 @@ namespace skepu
             int *displs{};
             int *byte_counts{};
             int *byte_displs{};
+            bool prepared{false};
 
-            Partition()
+            Partition() : typesize{sizeof(T)}, num_ranks{mpi_size()}, rank{mpi_rank()}
+            { }
+
+            Partition(size_t len) : typesize{sizeof(T)}, num_ranks{mpi_size()}, rank{mpi_rank()}
             {
-                typesize = sizeof(T);
-                num_ranks = skepu::cluster::mpi_size();
-                rank = skepu::cluster::mpi_rank();
-                counts = new int[num_ranks];
-                displs = new int[num_ranks];
-                byte_counts = new int[num_ranks];
-                byte_displs = new int[num_ranks];
+                prepare(len);
             }
 
             ~Partition()
             {
+                reset();
+            }
+
+            void reset()
+            {
+                if (!prepared) return;
+
+                prepared = false;
+                
                 delete [] counts;
                 delete [] displs;
                 delete [] byte_counts;
                 delete [] byte_displs;
             }
 
+            void init()
+            {
+                reset();
+                
+                prepared = true;
+
+                counts = new int[num_ranks];
+                displs = new int[num_ranks];
+                byte_counts = new int[num_ranks];
+                byte_displs = new int[num_ranks];
+            }
+
+
             void prepare(size_t major_len, size_t minor_len)
-            {                    
+            {             
+                init();       
                 size_t begin, end, part_size, rem;
 
                 part_size = major_len / num_ranks;

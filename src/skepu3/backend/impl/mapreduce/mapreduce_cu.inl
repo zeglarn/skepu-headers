@@ -16,7 +16,7 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs> 
 		typename MapFunc::Ret MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>
-		::mapReduceSingleThread_CU(size_t deviceID, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
+		::mapReduceSingleThread_CU(size_t deviceID, size_t startIdx, size_t localSize, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
 		{
 			Ret startValue = res;
 			// Setup parameters
@@ -28,9 +28,9 @@ namespace skepu
 			
 			// Number of threads per block, taken from NVIDIA source
 			size_t numBlocks, numThreads;
-			std::tie(numThreads, numBlocks) = getNumBlocksAndThreads(size, this->m_selected_spec->GPUBlocks(), this->m_selected_spec->GPUThreads());
+			std::tie(numThreads, numBlocks) = getNumBlocksAndThreads(localSize, this->m_selected_spec->GPUBlocks(), this->m_selected_spec->GPUThreads());
 			
-			auto elwiseMemP = std::make_tuple(std::get<EI>(eArgs).getParent().updateDevice_CU(std::get<EI>(eArgs).getAddress() + startIdx, size * abs(this->m_strides[EI]), deviceID, AccessMode::Read)...);
+			auto elwiseMemP = std::make_tuple(std::get<EI>(eArgs).getParent().updateDevice_CU(std::get<EI>(eArgs).getAddress() + startIdx, localSize * abs(this->m_strides[EI]), deviceID, AccessMode::Read)...);
 			auto anyMemP    = std::make_tuple(std::get<AI-arity>(aArgs).cudaProxy(deviceID, MapFunc::anyAccessMode[AI-arity], std::get<AI-arity>(proxy_tags), Index1D{0})...);
 			
 			// Create the output memory
@@ -38,8 +38,8 @@ namespace skepu
 			Ret *d_odata = outMemP.getDeviceDataPointer();
 			
 			// PRNG support
-			size_t prng_threads = std::min<size_t>(size, numBlocks * numThreads);
-			auto random = this->template prepareRandom<MapFunc::randomCount>(size, prng_threads);
+			size_t prng_threads = std::min<size_t>(localSize, numBlocks * numThreads);
+			auto random = this->template prepareRandom<MapFunc::randomCount>(globalSize, prng_threads);
 			auto randomMemP = random.updateDevice_CU(random.getAddress(), prng_threads, deviceID, AccessMode::ReadWrite);
 			
 			// First map and reduce all elements blockwise so that each block produces one element. After this the mapping is complete
@@ -59,7 +59,7 @@ namespace skepu
 				std::get<AI-arity>(anyMemP).second...,
 				std::get<CI-arity-anyArity>(scArgs)...,
 				elwise_j(eArgs), elwise_k(eArgs), elwise_l(eArgs),
-				size, startIdx, this->m_strides
+				localSize, startIdx, this->m_strides
 			);
 			
 			size_t threads, blocks;
@@ -88,15 +88,15 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs> 
 		typename MapFunc::Ret MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>
-		::mapReduceMultiStream_CU(size_t deviceID, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
+		::mapReduceMultiStream_CU(size_t deviceID, size_t startIdx, size_t localSize, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
 		{
 			CHECK_CUDA_ERROR(cudaSetDevice(deviceID));
 			
 			// Setup parameters
 			Device_CU *device = this->m_environment->m_devices_CU[deviceID];
-			const size_t numKernels = std::min<size_t>(device->getNoConcurrentKernels(), size);
-			const size_t numElemPerSlice = size / numKernels;
-			const size_t rest = size % numKernels;
+			const size_t numKernels = std::min<size_t>(device->getNoConcurrentKernels(), localSize);
+			const size_t numElemPerSlice = localSize / numKernels;
+			const size_t rest = localSize % numKernels;
 			
 			auto eArgs  = std::forward_as_tuple(get<EI>(std::forward<CallArgs>(args)...)...);
 			auto aArgs  = std::forward_as_tuple(get<AI>(std::forward<CallArgs>(args)...)...);
@@ -145,8 +145,8 @@ namespace skepu
 				Ret *deviceOutMemP = outMemP[i]->getDeviceDataPointer();
 				
 				// PRNG support
-				size_t prng_threads = std::min<size_t>(size, numBlocks[i] * numThreads[i]);
-				auto random = this->template prepareRandom<MapFunc::randomCount>(size, prng_threads);
+				size_t prng_threads = std::min<size_t>(localSize, numBlocks[i] * numThreads[i]);
+				auto random = this->template prepareRandom<MapFunc::randomCount>(globalSize, prng_threads);
 				auto randomMemP = random.updateDevice_CU(random.getAddress(), prng_threads, deviceID, AccessMode::ReadWrite);
 
 #ifdef USE_PINNED_MEMORY
@@ -198,11 +198,11 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename ...CallArgs> 
 		typename MapFunc::Ret MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>
-		::mapReduceMultiStreamMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
+		::mapReduceMultiStreamMultiGPU_CU(size_t useNumGPU, size_t startIdx, size_t localSize, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
 		{
 #ifdef USE_PINNED_MEMORY
-			const size_t numElemPerDevice = size / useNumGPU;
-			const size_t deviceRest = size % useNumGPU;
+			const size_t numElemPerDevice = localSize / useNumGPU;
+			const size_t deviceRest = localSize % useNumGPU;
 			size_t numKernels[MAX_GPU_DEVICES];
 			size_t numElemPerStream[MAX_GPU_DEVICES];
 			size_t streamRest[MAX_GPU_DEVICES];
@@ -277,8 +277,8 @@ namespace skepu
 					Ret *deviceOutMemP = outMemP[i][j]->getDeviceDataPointer();
 					
 					// PRNG support
-					size_t prng_threads = std::min<size_t>(size, numBlocks * numThreads);
-					auto random = this->template prepareRandom<MapFunc::randomCount>(size, prng_threads);
+					size_t prng_threads = std::min<size_t>(localSize, numBlocks * numThreads);
+					auto random = this->template prepareRandom<MapFunc::randomCount>(globalSize, prng_threads);
 					auto randomMemP = random.updateDevice_CU(random.getAddress(), prng_threads, i, AccessMode::ReadWrite);
 					
 					this->m_cuda_kernel<<<numBlocks[i][j], numThreads[i][j], sharedMemSize, this->m_environment->m_devices_CU[i]->m_streams[j]>>>
@@ -325,11 +325,11 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs> 
 		typename MapFunc::Ret MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>
-		::mapReduceSingleThreadMultiGPU_CU(size_t numDevices, size_t startIdx, size_t size, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
+		::mapReduceSingleThreadMultiGPU_CU(size_t numDevices, size_t startIdx, size_t localSize, size_t globalSize, int rank, int numRanks, pack_indices<OI...>, pack_indices<EI...>, pack_indices<AI...>, pack_indices<CI...>, Ret &res, CallArgs&&... args)
 		{
 			// Divide elements among participating devices
-			const size_t numElemPerSlice = size / numDevices;
-			const size_t rest = size % numDevices;
+			const size_t numElemPerSlice = localSize / numDevices;
+			const size_t rest = localSize % numDevices;
 			
 			auto eArgs  = std::forward_as_tuple(get<EI>(std::forward<CallArgs>(args)...)...);
 			auto aArgs  = std::forward_as_tuple(get<AI>(std::forward<CallArgs>(args)...)...);
@@ -370,8 +370,8 @@ namespace skepu
 				Ret *deviceOutMemP = outMemP[i]->getDeviceDataPointer();
 				
 				// PRNG support
-				size_t prng_threads = std::min<size_t>(size, numBlocks[i] * numThreads[i]);
-				auto random = this->template prepareRandom<MapFunc::randomCount>(size, prng_threads);
+				size_t prng_threads = std::min<size_t>(localSize, numBlocks[i] * numThreads[i]);
+				auto random = this->template prepareRandom<MapFunc::randomCount>(globalSize, prng_threads);
 				auto randomMemP = random.updateDevice_CU(random.getAddress(), prng_threads, i, AccessMode::ReadWrite);
 				
 				// Copies the elements to the device
@@ -428,9 +428,9 @@ namespace skepu
 		template<size_t arity, typename MapFunc, typename ReduceFunc, typename CUDAKernel, typename CUDAReduceKernel, typename CLKernel>
 		template<size_t... OI, size_t... EI, size_t... AI, size_t... CI, typename... CallArgs> 
 		typename MapFunc::Ret MapReduce<arity, MapFunc, ReduceFunc, CUDAKernel, CUDAReduceKernel, CLKernel>
-		::CUDA(size_t startIdx, size_t size, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<AI...> ai, pack_indices<CI...> ci, Ret &res, CallArgs&&... args)
+		::CUDA(size_t startIdx, size_t localSize, size_t globalSize, int rank, int numRanks, pack_indices<OI...> oi, pack_indices<EI...> ei, pack_indices<AI...> ai, pack_indices<CI...> ci, Ret &res, CallArgs&&... args)
 		{
-			DEBUG_TEXT_LEVEL1("CUDA MapReduce: size = " << size << ", maxDevices = " << this->m_selected_spec->devices()
+			DEBUG_TEXT_LEVEL1("CUDA MapReduce: localSize = " << localSize << ", maxDevices = " << this->m_selected_spec->devices()
 				<< ", maxBlocks = " << this->m_selected_spec->GPUBlocks() << ", maxThreads = " << this->m_selected_spec->GPUThreads());
 			
 			const size_t numDevices = std::min(this->m_selected_spec->devices(), this->m_environment->m_devices_CU.size());
@@ -443,10 +443,10 @@ namespace skepu
 				
 				//Checks whether or not the GPU supports MemoryTransfer/KernelExec overlapping, if not call mapReduceSingleThread function
 				if (this->m_environment->m_devices_CU.at(this->m_environment->bestCUDADevID)->isOverlapSupported())
-					return mapReduceMultiStream_CU(this->m_environment->bestCUDADevID, startIdx, size, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
+					return mapReduceMultiStream_CU(this->m_environment->bestCUDADevID, startIdx, localSize, globalSize, rank, numRanks, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
 				
 #endif
-				return mapReduceSingleThread_CU(this->m_environment->bestCUDADevID, startIdx, size, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
+				return mapReduceSingleThread_CU(this->m_environment->bestCUDADevID, startIdx, localSize, globalSize, rank, numRanks, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
 			}
 			
 #endif // SKEPU_DEBUG_FORCE_MULTI_GPU_IMPL
@@ -456,10 +456,10 @@ namespace skepu
 			// if pinned memory is used but the device does not support overlap the function continues with the previous implementation.
 			// if the multistream version is being used the function will exit at this point.
 			if (this->m_environment->supportsCUDAOverlap())
-				return mapReduceMultiStreamMultiGPU_CU(numDevices, startIdx, size, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
+				return mapReduceMultiStreamMultiGPU_CU(numDevices, startIdx, localSize, globalSize, rank, numRanks, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
 			
 #endif
-			return mapReduceSingleThreadMultiGPU_CU(numDevices, startIdx, size, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
+			return mapReduceSingleThreadMultiGPU_CU(numDevices, startIdx, localSize, globalSize, rank, numRanks, oi, ei, ai, ci, res, std::forward<CallArgs>(args)...);
 		}
 	} // namespace backend
 } // namespace skepu
