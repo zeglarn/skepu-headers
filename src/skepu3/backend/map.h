@@ -188,7 +188,7 @@ namespace skepu
 				
 				localSize = get<0>(std::forward<CallArgs>(args)...).getParent().part_size();
 				startIdx = get<0>(std::forward<CallArgs>(args)...).getParent().part_begin();
-				if (!localSize) goto afterSwitch;
+				if (!localSize) return;
 #endif
 
 				switch (this->m_selected_spec->activateBackend())
@@ -242,9 +242,6 @@ namespace skepu
 					);
 					break;
 				}
-#ifdef SKEPU_MPI
-afterSwitch:
-#endif
 			}
 
 		}; // class Map
