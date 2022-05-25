@@ -397,7 +397,7 @@ namespace skepu
 #endif
 				case Backend::Type::CUDA:
 #ifdef SKEPU_CUDA
-					ret = CU(res, arg_tr.begin(), numRows);
+					ret = CU(res, it, numRows);
 					break;
 #endif
 				case Backend::Type::OpenCL:
