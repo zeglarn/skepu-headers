@@ -447,38 +447,38 @@ namespace skepu
 // Cluster iterators
 ///////////////////////////////////////////////
 
-	template <typename T>
-	typename Vector<T>::iterator Vector<T>::globalBegin()
-	{
-		return iterator(*this, this->m_data);
-	}
+// 	template <typename T>
+// 	typename Vector<T>::iterator Vector<T>::globalBegin()
+// 	{
+// 		return iterator(*this, this->m_data);
+// 	}
 
-	template <typename T>
-	typename Vector<T>::const_iterator Vector<T>::globalBegin() const
-	{
-		return const_iterator(*this, &this->m_data[0]);
-	}
+// 	template <typename T>
+// 	typename Vector<T>::const_iterator Vector<T>::globalBegin() const
+// 	{
+// 		return const_iterator(*this, &this->m_data[0]);
+// 	}
 
-	template <typename T>
-	typename Vector<T>::iterator Vector<T>::localBegin()
-	{
-#ifdef SKEPU_MPI
-		this->mark_dirty();
-		return iterator(*this, this->m_data + this->partition.part_begin());
-#else
-		return iterator(*this, this->m_data);
-#endif
-	}
+// 	template <typename T>
+// 	typename Vector<T>::iterator Vector<T>::localBegin()
+// 	{
+// #ifdef SKEPU_MPI
+// 		this->mark_dirty();
+// 		return iterator(*this, this->m_data + this->partition.part_begin());
+// #else
+// 		return iterator(*this, this->m_data);
+// #endif
+// 	}
 
-	template <typename T>
-	typename Vector<T>::const_iterator Vector<T>::localBegin() const
-	{
-#ifdef SKEPU_MPI
-	return const_iterator(*this, this->m_data + this->partition.part_begin());
-#else
-	return const_iterator(*this, this->m_data);
-#endif
-	}
+// 	template <typename T>
+// 	typename Vector<T>::const_iterator Vector<T>::localBegin() const
+// 	{
+// #ifdef SKEPU_MPI
+// 	return const_iterator(*this, this->m_data + this->partition.part_begin());
+// #else
+// 	return const_iterator(*this, this->m_data);
+// #endif
+// 	}
 
 
 ///////////////////////////////////////////////
@@ -488,11 +488,7 @@ namespace skepu
 	template <typename T>
 	typename Vector<T>::iterator Vector<T>::begin()
 	{
-#ifdef SKEPU_MPI
-		if (this->skeleton_iterator)
-			return this->localBegin();
-#endif
-		return this->globalBegin();
+		return iterator(*this, this->m_data);
 	}
 	
 	template <typename T>
@@ -505,25 +501,13 @@ namespace skepu
 	template <typename T>
 	typename Vector<T>::strided_iterator Vector<T>::stridedBegin(size_t n, int s)
 	{
-#ifdef SKEPU_MPI
-		if (this->skeleton_iterator)
-		{
-			this->mark_dirty();
-			auto m_d = &this->m_data[this->partition.part_begin()];
-			return strided_iterator(*this, &m_d[(s < 0) ? (-n + 1) * s : 0], s);
-		}
-#endif
 		return strided_iterator(*this, &this->m_data[(s < 0) ? (-n + 1) * s : 0], s);
 	}
 	
 	template <typename T>
 	typename Vector<T>::const_iterator Vector<T>::begin() const
 	{
-#ifdef SKEPU_MPI
-		if (this->skeleton_iterator)
-			return this->localBegin();
-#endif
-		return this->globalBegin();
+		return const_iterator(*this, this->m_data);
 	}
 	
 	template <typename T>
@@ -536,13 +520,6 @@ namespace skepu
 	template <typename T>
 	typename Vector<T>::const_strided_iterator Vector<T>::stridedBegin(size_t n, int s) const
 	{
-#ifdef SKEPU_MPI
-		if (this->skeleton_iterator)
-		{
-			auto m_d = &this->m_data[this->partition.part_begin()];
-			return const_strided_iterator(*this, &m_d[(s < 0) ? (-n + 1) * s : 0], s);
-		}
-#endif
 		return const_strided_iterator(*this, &this->m_data[(s < 0) ? (-n + 1) * s : 0], s);
 	}
 	

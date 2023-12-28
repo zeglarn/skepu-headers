@@ -7,7 +7,7 @@ namespace skepu
 	template<typename T>
 	Index2D MatrixIterator<T>::getIndex() const
 	{
-		size_t index = *this - m_parent->globalBegin();
+		size_t index = *this - m_parent->begin();
 		size_t rows = index / m_parent->total_cols();
 		size_t cols = index % m_parent->total_cols();
 		return Index2D{rows, cols};

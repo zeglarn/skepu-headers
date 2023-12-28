@@ -162,7 +162,6 @@ namespace skepu
 				int *counts;
 				cluster::Partition<Ret> p{};
 				
-				// pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
 				pack_expand((cluster::handle_container_arg(get<AI>(std::forward<CallArgs>(args)...).getParent(),std::get<AI-arity-outArity>(typename MapFunc::ProxyTags{})), 0)...);
 				pack_expand((cluster::handle_read_write_access(get<AI>(std::forward<CallArgs>(args)...).getParent(),MapFunc::anyAccessMode[AI-arity-outArity]), 0)...);
 				

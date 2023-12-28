@@ -211,13 +211,6 @@ namespace skepu
 		iterator begin();
 		iterator end();
 		strided_iterator stridedBegin(size_t n, int dir);
-
-		// related to running on cluster
-		iterator globalBegin();
-		const_iterator globalBegin() const;
-
-		iterator localBegin();
-		const_iterator localBegin() const;
 		
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -343,7 +336,7 @@ namespace skepu
 
 #ifdef SKEPU_MPI
 	public:
-		skepu::cluster::Partition<T> partition{};
+		cluster::Partition<T> partition{};
 		size_t part_begin();
 		size_t part_end();
 		size_t part_size();
@@ -354,28 +347,12 @@ namespace skepu
 		void mark_clean();
 		bool is_dirty() const;
 
-		bool skeleton_iterator{false};
-
-		void set_skeleton_iterator(bool val);
-
 		void partition_prepare();
 		void partition_prepare(size_t size);
 		void flush_MPI();
 		void allgather();
 		void gather_to_root();
 		void scatter_from_root();
-
-// 		std::string name{"Vector"};
-
-// 		void setName(std::string _name)
-// 		{
-// 			name = _name;
-// 		}
-// 	public:
-// 		std::string getName() {return name;}
-// #else
-// 	public:
-// 		void setName(std::string) { }
 #endif
 		
 	};

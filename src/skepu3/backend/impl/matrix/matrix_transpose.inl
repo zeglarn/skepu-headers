@@ -22,7 +22,11 @@ namespace skepu
 			return;
 		
 		updateHost();
-		
+
+#ifdef SKEPU_MPI
+		allgather();
+#endif
+
 		if (!this->m_transpose_matrix) // if not created alreay, create transpose matrix
 			this->m_transpose_matrix = new Matrix<T>(this->m_cols, this->m_rows);
 		else
@@ -48,6 +52,10 @@ namespace skepu
 			return;
 		
 		updateHost();
+
+#ifdef SKEPU_MPI
+		allgather();
+#endif
 		
 		if (!this->m_transpose_matrix) // if not created alreay, create transpose matrix
 			this->m_transpose_matrix = new Matrix<T>(this->m_cols, this->m_rows);
@@ -142,6 +150,11 @@ namespace skepu
 		
 		if (this->m_transpose_matrix && !this->m_dataChanged)
 			return;
+
+#ifdef SKEPU_MPI
+		updateHost();
+		allgather();
+#endif
 		
 		if (!this->m_transpose_matrix) // if not created alreay, create transpose matrix
 			this->m_transpose_matrix = new Matrix<T>(this->m_cols, this->m_rows);

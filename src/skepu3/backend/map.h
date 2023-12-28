@@ -173,15 +173,38 @@ namespace skepu
 				size_t startIdx{0};
 				int rank{0};
 				int numRanks{1};
+// #ifdef SKEPU_OPENMP
+// 				// Get the schedule to apply when a runtime schedule is encountered
+// 				omp_sched_t kind;
+// 				int chunk_size;
+// 				omp_get_schedule(&kind, &chunk_size);
+
+// 				printf("In case a runtime schedule is encountered, the ");
+// 				switch(kind)
+// 				{
+// 				case omp_sched_static:
+// 					printf("static");
+// 					break;
+// 				case omp_sched_dynamic:
+// 					printf("dynamic");
+// 					break;
+// 				case omp_sched_guided:
+// 					printf("guided");
+// 					break;
+// 				case omp_sched_auto:
+// 					printf("auto");
+// 					break;
+// 				default:
+// 					printf("other (implementation specific)");
+// 					break;
+// 				}
+// 				printf(" schedule is applied, with chunks made of %d iteration%s.\n", chunk_size, (chunk_size > 1) ? "s" : "");
+// #endif
 
 #ifdef SKEPU_MPI
 				rank = cluster::mpi_rank();
 				numRanks = cluster::mpi_size();
-
-				// set
-				// pack_expand((get<EI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
-				// pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().set_skeleton_iterator(true), 0)...);
-
+				
 				pack_expand((cluster::handle_container_arg(get<AI>(std::forward<CallArgs>(args)...).getParent(),std::get<AI-arity-outArity>(typename MapFunc::ProxyTags{})), 0)...);
 				pack_expand((get<OI>(std::forward<CallArgs>(args)...).getParent().mark_dirty(), 0)...);
 				pack_expand((cluster::handle_read_write_access(get<AI>(std::forward<CallArgs>(args)...).getParent(),MapFunc::anyAccessMode[AI-arity-outArity]), 0)...);

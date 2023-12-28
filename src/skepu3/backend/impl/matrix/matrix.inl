@@ -421,58 +421,58 @@ inline void Matrix<T>::updateHostAndReleaseDeviceAllocations()
 // Cluster iterators
 ///////////////////////////////////////////////
 
-template <typename T>
-typename Matrix<T>::iterator Matrix<T>::globalBegin()
-{
-   return iterator(this, this->m_data);
-}
+// template <typename T>
+// typename Matrix<T>::iterator Matrix<T>::globalBegin()
+// {
+//    return iterator(this, this->m_data);
+// }
 
-template <typename T>
-typename Matrix<T>::iterator Matrix<T>::globalBegin(size_t row)
-{
-   if (row >= total_rows())
-   {
-      SKEPU_ERROR("ERROR! Row index is out of bound!");
-   }
-   return iterator(this, this->m_data + row * this->m_cols);
-}
+// template <typename T>
+// typename Matrix<T>::iterator Matrix<T>::globalBegin(size_t row)
+// {
+//    if (row >= total_rows())
+//    {
+//       SKEPU_ERROR("ERROR! Row index is out of bound!");
+//    }
+//    return iterator(this, this->m_data + row * this->m_cols);
+// }
 
-template <typename T>
-typename Matrix<T>::const_iterator Matrix<T>::globalBegin() const
-{
-   return const_iterator(this, this->m_data);
-}
+// template <typename T>
+// typename Matrix<T>::const_iterator Matrix<T>::globalBegin() const
+// {
+//    return const_iterator(this, this->m_data);
+// }
 
-template <typename T>
-typename Matrix<T>::const_iterator Matrix<T>::globalBegin(size_t row) const
-{
-   if (row >= total_rows())
-   {
-      SKEPU_ERROR("ERROR! Row index is out of bound!");
-   }
-   return const_iterator(this, this->m_data + row * this->m_cols);
-}
+// template <typename T>
+// typename Matrix<T>::const_iterator Matrix<T>::globalBegin(size_t row) const
+// {
+//    if (row >= total_rows())
+//    {
+//       SKEPU_ERROR("ERROR! Row index is out of bound!");
+//    }
+//    return const_iterator(this, this->m_data + row * this->m_cols);
+// }
 
-template <typename T>
-typename Matrix<T>::iterator Matrix<T>::localBegin()
-{
-#ifdef SKEPU_MPI
-   this->mark_dirty();
-   return iterator(this, this->m_data + this->partition.part_begin());
-#else
-   return iterator(this, this->m_data);
-#endif
-}
+// template <typename T>
+// typename Matrix<T>::iterator Matrix<T>::localBegin()
+// {
+// #ifdef SKEPU_MPI
+//    this->mark_dirty();
+//    return iterator(this, this->m_data + this->partition.part_begin());
+// #else
+//    return iterator(this, this->m_data);
+// #endif
+// }
 
-template <typename T>
-typename Matrix<T>::const_iterator Matrix<T>::localBegin() const
-{
-#ifdef SKEPU_MPI
-   return const_iterator(this, this->m_data + this->partition.part_begin());
-#else
-   return const_iterator(this, this->m_data);
-#endif
-}
+// template <typename T>
+// typename Matrix<T>::const_iterator Matrix<T>::localBegin() const
+// {
+// #ifdef SKEPU_MPI
+//    return const_iterator(this, this->m_data + this->partition.part_begin());
+// #else
+//    return const_iterator(this, this->m_data);
+// #endif
+// }
 
 
 ///////////////////////////////////////////////
@@ -483,42 +483,38 @@ typename Matrix<T>::const_iterator Matrix<T>::localBegin() const
 template <typename T>
 typename Matrix<T>::iterator Matrix<T>::begin()
 {
-#ifdef SKEPU_MPI
-   if (this->skeleton_iterator)
-      return this->localBegin();
-#endif
-   return this->globalBegin();
+   return iterator(this, this->m_data);
 }
 
 template <typename T>
 typename Matrix<T>::iterator Matrix<T>::begin(size_t row)
 {
-   return this->globalBegin(row);
+   if (row >= total_rows())
+   {
+      SKEPU_ERROR("ERROR! Row index is out of bound!");
+   }
+   return iterator(this, this->m_data + row * this->m_cols);
 }
 
 template <typename T>
 typename Matrix<T>::const_iterator Matrix<T>::begin() const
 {
-#ifdef SKEPU_MPI
-   if (this->skeleton_iterator)
-      return this->localBegin();
-#endif
-   return this->globalBegin();
+   return const_iterator(this, this->m_data);
 }
 
 template <typename T>
 typename Matrix<T>::const_iterator Matrix<T>::begin(size_t row) const
 {
-   return this->globalBegin(row);
+   if (row >= total_rows())
+   {
+      SKEPU_ERROR("ERROR! Row index is out of bound!");
+   }
+   return const_iterator(this, this->m_data + row * this->m_cols);
 }
 
 template <typename T>
 typename Matrix<T>::iterator Matrix<T>::end()
 {
-#ifdef SKEPU_MPI
-   if (this->skeleton_iterator)
-      return iterator(this, this->m_data + this->partition.part_end());
-#endif
    return iterator(this, this->m_data + this->size());
 }
 
@@ -535,11 +531,7 @@ typename Matrix<T>::iterator Matrix<T>::end(size_t row)
 template <typename T>
 typename Matrix<T>::const_iterator Matrix<T>::end() const
 {
-#ifdef SKEPU_MPI
-   if (this->skeleton_iterator)
-      return iterator(this, this->m_data + this->partition.part_end());
-#endif
-   return iterator(this, this->m_data + this->size());
+   return const_iterator(this, this->m_data + this->size());
 }
 
 template <typename T>
@@ -549,7 +541,7 @@ typename Matrix<T>::const_iterator Matrix<T>::end(size_t row) const
    {
       SKEPU_ERROR("ERROR! Row index is out of bound!");
    }
-   return iterator(this, this->m_data + this->size() - (this->m_rows - row + 1) * this->m_cols);
+   return const_iterator(this, this->m_data + this->size() - (this->m_rows - row + 1) * this->m_cols);
 }
 
 #ifdef SKEPU_PRECOMPILED
